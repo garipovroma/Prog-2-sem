@@ -1,8 +1,8 @@
 package exp.parser;
 
-import exp.BaseTest;
-import exp.CommonExpression;
-import exp.TripleExpression;
+import exp.baseExpressions.BaseTest;
+import exp.baseExpressions.CommonExpression;
+import exp.baseExpressions.TripleExpression;
 
 import java.util.ArrayList;
 import java.util.List;

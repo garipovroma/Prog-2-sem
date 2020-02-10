@@ -1,6 +1,6 @@
 package exp.parser;
 
-import exp.TripleExpression;
+import exp.baseExpressions.TripleExpression;
 
 /**
  * @author Georgiy Korneev (kgeorgiy@kgeorgiy.info)
