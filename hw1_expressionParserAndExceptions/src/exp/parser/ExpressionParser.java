@@ -1,6 +1,6 @@
 package exp.parser;
 
-import exp.*;
+import exp.baseExpressions.*;
 
 import java.util.Map;
 
@@ -48,7 +48,7 @@ public class ExpressionParser extends BaseParser implements Parser {
                 if (between('0', '9')) {
                     return getConst(true);
                 } else {
-                    return Negative.getNegative(getExpression(0));
+                    return Negate.getNegative(getExpression(0));
                 }
             } else {
                 if (between('0', '9')) {
