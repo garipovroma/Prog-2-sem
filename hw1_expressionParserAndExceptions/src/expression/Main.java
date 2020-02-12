@@ -23,7 +23,7 @@ public class Main {
             }
         }*/
        Parser myParser = new ExpressionParser();
-       CommonExpression e = (CommonExpression) myParser.parse("x");
-       System.out.println(e.toMiniString());
+       CommonExpression e = (CommonExpression) myParser.parse("x*y+(z-1   )/10");
+       System.out.println(e.evaluate(0));
     }
 }

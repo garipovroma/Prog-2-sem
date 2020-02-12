@@ -9,12 +9,12 @@ public class CheckedDivide extends BinaryOperator {
     }
     @Override
     public int makeOperation(int left, int right) {
-        if (super.checkOverflow(left, right)) {
+        /*if (super.checkOverflow(left, right)) {
             throw new OverflowException(left + " / " + right + " - overflows");
         }
         if (super.checkDivisionByZero(left, right)) {
             throw new DivideByZeroException(left + " / " + right + " - division by zero");
-        }
+        }*/
         return left / right;
     }
     @Override

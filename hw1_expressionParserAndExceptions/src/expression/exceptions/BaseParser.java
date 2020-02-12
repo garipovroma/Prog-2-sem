@@ -17,6 +17,12 @@ public class BaseParser {
         }
         return false;
     }
+    protected boolean testBetween(char l, char r) {
+        if (l <= ch && ch <= r) {
+            return true;
+        }
+        return false;
+    }
     protected void expect(final char value) {
         if (ch != value) {
             throw error("Expected '" + value + "' , found '" + ch + "'");
