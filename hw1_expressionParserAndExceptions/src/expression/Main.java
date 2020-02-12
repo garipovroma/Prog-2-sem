@@ -23,7 +23,10 @@ public class Main {
             }
         }*/
        Parser myParser = new ExpressionParser();
-       CommonExpression e = (CommonExpression) myParser.parse("x*y+(z-1   )/10");
+       //CommonExpression e = (CommonExpression) myParser.parse("((2)+2))");
+         //CommonExpression e = (CommonExpression) myParser.parse("10 20");
+        //CommonExpression e = (CommonExpression) myParser.parse("10 20");
+        CommonExpression e = (CommonExpression) myParser.parse("-(-(-\t\t-5 + 16   *x*y) + 1 * z) -(((-11)))");
        System.out.println(e.evaluate(0));
     }
 }

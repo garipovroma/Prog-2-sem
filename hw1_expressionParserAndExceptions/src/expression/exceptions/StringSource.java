@@ -8,7 +8,6 @@ public class StringSource implements ExpressionSource {
         this.data = data;
         this.pos = 0;
     }
-
     private void skipWhitespaces() {
         while (pos < data.length() && Character.isWhitespace(data.charAt(pos))) {
             pos++;
@@ -23,8 +22,15 @@ public class StringSource implements ExpressionSource {
 
     @Override
     public char next() {
-        skipWhitespaces();
         return data.charAt(pos++);
+    }
+    @Override
+    public char commonNext() {
+        return data.charAt(pos++);
+    }
+    @Override
+    public boolean commonHasNext() {
+        return pos < data.length();
     }
     @Override
     public ExpressionException error(String message) {

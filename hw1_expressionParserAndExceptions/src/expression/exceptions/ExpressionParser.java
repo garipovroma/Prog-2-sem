@@ -25,6 +25,15 @@ public class ExpressionParser extends BaseParser implements Parser {
             1, Set.of(Token.MUL, Token.DIV),
             2, Set.of(Token.ADD, Token.SUB)
     );
+    private static final Set<Token> operators = Set.of(
+            Token.ADD, Token.SUB, Token.DIV, Token.MUL
+    );
+    private static final Map<Token, String> getOperator = Map.of(
+            Token.ADD, "+",
+            Token.SUB, "-",
+            Token.MUL, "*",
+            Token.DIV, "/"
+    );
     private static final int lowestPriority = 0;
 
     @Override
@@ -32,7 +41,8 @@ public class ExpressionParser extends BaseParser implements Parser {
         createSource(new StringSource(expression));
         nextChar();
         getToken();
-        return parseExpression(highestPriority, false);
+        CommonExpression commonExpression = parseExpression(highestPriority, false, false);
+        return commonExpression;
     }
     private Token getConst() {
         StringBuilder value = new StringBuilder();
@@ -40,10 +50,12 @@ public class ExpressionParser extends BaseParser implements Parser {
             value.append("-");
             getNegativeConst = false;
         }
+        skipWhitespaces();
         while (between('0', '9')) {
             value.append(ch);
-            nextChar();
+            commonNextChar();
         }
+        skipWhitespaces();
         try {
             curConst = Integer.parseInt(value.toString());
         } catch (NumberFormatException e) {
@@ -53,6 +65,7 @@ public class ExpressionParser extends BaseParser implements Parser {
     }
     private Token getToken() {
         if (between('0', '9')) {
+            skipWhitespaces();
             return getConst();
         } else {
             switch  (ch) {
@@ -89,7 +102,7 @@ public class ExpressionParser extends BaseParser implements Parser {
                                     " - undefined variable");
                         }
                     } else {
-                        throw new UndefinedSignException(ch + " - undefined sign");
+                        throw new UnexpectedSignException(ch + " - undefined sign");
                     }
             }
         }
@@ -102,6 +115,7 @@ public class ExpressionParser extends BaseParser implements Parser {
         switch (curToken) {
             case NUM:
                 CommonExpression cur = new Const(curConst);
+                skipWhitespaces();
                 getToken();
                 return cur;
             case NAME:
@@ -118,31 +132,42 @@ public class ExpressionParser extends BaseParser implements Parser {
                 }
                 return CheckedNegate.getNegative(parsePrimeExpression(true));
             case LBRACKET:
-                cur = parseExpression(2, true);
+                cur = parseExpression(2, true, true);
                 if (curToken != Token.RBRACKET) {
-                    throw new BracketNotFoundException("Bracket not found after :" + cur.toString());
+                    throw new BracketException("Bracket not found after :" + cur.toString());
                 }
                 getToken();
                 return cur;
             default:
-                throw new UndefinedSignException(ch + " - undefined sign");
+                throw new UnexpectedSignException(ch + " - unexpected sign");
         }
     }
 
-    private CommonExpression parseExpression(int priority, boolean get) {
+    private CommonExpression parseExpression(int priority, boolean get, boolean expectedRightBracket) {
         if (priority == lowestPriority) {
             return parsePrimeExpression(get);
         } else {
-            CommonExpression res = parseExpression(priority - 1, get);
+            CommonExpression res = parseExpression(priority - 1, get, expectedRightBracket);
             for ( ; ; ) {
                 Token curTok = curToken;
+                if (!operators.contains(curToken) && curToken != Token.END && curToken != Token.RBRACKET) {
+                    throw new UnexpectedSignException(getOperator.get(curToken) + " - unexpected sign");
+                }
                 if (getOperationsByPriority.get(priority).contains(curToken)) {
-                    CommonExpression curExpression = parseExpression(priority - 1, true);
+                    CommonExpression curExpression = parseExpression(priority - 1,
+                            true, expectedRightBracket);
                     res = makeExpression(res, curExpression, curTok);
                 } else {
-                    return res;
+                    break;
                 }
             }
+            if (expectedRightBracket && curToken != Token.RBRACKET && priority == highestPriority) {
+                throw new BracketException("Expected ), but not found");
+            }
+            if (!expectedRightBracket && curToken == Token.RBRACKET) {
+                throw new BracketException("Unexpected )");
+            }
+            return res;
         }
     }
     private CommonExpression makeExpression(CommonExpression left, CommonExpression right, Token operator) {

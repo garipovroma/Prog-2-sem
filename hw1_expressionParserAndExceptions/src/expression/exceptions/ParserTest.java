@@ -49,7 +49,7 @@ public class ParserTest extends BaseTest {
                 op("z", (x, y, z) -> z),
                 op("x+2", (x, y, z) -> x + 2),
                 op("2-y", (x, y, z) -> 2 - y),
-                op("  3*  z  ", (x, y, z) -> 3 * z),
+                op("   3*  z  ", (x, y, z) -> 3 * z),
                 op("x/  -  2", (x, y, z) -> -x / 2),
                 op("x*y+(z-1   )/10", (x, y, z) -> x * y + (int) (z - 1) / 10),
                 op("-(-(-\t\t-5 + 16   *x*y) + 1 * z) -(((-11)))", (x, y, z) -> -(-(5 + 16 * x * y) + z) + 11),

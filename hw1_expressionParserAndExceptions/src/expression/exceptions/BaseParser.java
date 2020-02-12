@@ -6,10 +6,17 @@ public class BaseParser {
     public void createSource(ExpressionSource source) {
         this.source = source;
     }
+    protected void commonNextChar() {
+        ch = source.commonHasNext() ? source.commonNext() : '\0';
+    }
     protected void nextChar() {
         ch = source.hasNext() ? source.next() : '\0';
     }
-
+    protected void skipWhitespaces() {
+        while (ch != '\0' && Character.isWhitespace(ch)) {
+            commonNextChar();
+        }
+    }
     protected boolean test(char expected) {
         if (ch == expected) {
             nextChar();

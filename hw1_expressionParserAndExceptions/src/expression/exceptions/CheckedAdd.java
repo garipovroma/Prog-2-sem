@@ -9,9 +9,9 @@ public class CheckedAdd extends BinaryOperator {
     }
     @Override
     public int makeOperation(int left, int right) {
-        /*if (super.checkOverflow(left, right)) {
+        if (super.checkOverflow(left, right)) {
             throw new OverflowException(left + " + " + right + " - overflows");
-        }*/
+        }
         return left + right;
     }
     @Override
