@@ -1,6 +1,6 @@
 package expression;
 
-public class LeftShift extends AbstractOperator {
+public class LeftShift extends BinaryOperator {
     public LeftShift (CommonExpression left, CommonExpression right) {
         super(left, right);
     }

@@ -32,6 +32,7 @@ public class ExpressionParser extends BaseParser implements Parser {
     private static final int lowestPriority = 0;
 
     public CommonExpression parse(String string) {
+        // createSource(new StringSource(string));
         createSource(new StringSource(string + ")"));
         nextChar();
         return getExpression(highestPriority);
@@ -48,7 +49,7 @@ public class ExpressionParser extends BaseParser implements Parser {
                 if (between('0', '9')) {
                     return getConst(true);
                 } else {
-                    return Negate.getNegative(getExpression(0));
+                    return CheckedNegate.getNegative(getExpression(0));
                 }
             } else {
                 if (between('0', '9')) {
@@ -75,13 +76,13 @@ public class ExpressionParser extends BaseParser implements Parser {
     private CommonExpression makeExpression(CommonExpression left, CommonExpression right, String operator) {
         switch (operator) {
             case "+":
-                return new Add(left, right);
+                return new CheckedAdd(left, right);
             case "-":
-                return new Subtract(left, right);
+                return new CheckedSubtract(left, right);
             case "*":
-                return new Multiply(left, right);
+                return new CheckedMultiply(left, right);
             case "/":
-                return new Divide(left, right);
+                return new CheckedDivide(left, right);
             case "<<":
                 return new LeftShift(left, right);
             case ">>":
@@ -95,6 +96,10 @@ public class ExpressionParser extends BaseParser implements Parser {
         while (!testOperator()) {
             variableName.append(ch);
             nextChar();
+        }
+        if (!variableName.toString().equals("x") && !variableName.toString().equals("y")
+                && !variableName.toString().equals("z")) {
+            throw new UndefinedVariableException(variableName.toString() + " - variable name doesn't supported");
         }
         return new Variable(variableName.toString());
     }

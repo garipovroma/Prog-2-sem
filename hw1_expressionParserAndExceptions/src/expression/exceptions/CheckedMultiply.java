@@ -1,14 +1,17 @@
 package expression.exceptions;
 
-import expression.AbstractOperator;
+import expression.BinaryOperator;
 import expression.CommonExpression;
 
-public class CheckedMultiply extends AbstractOperator {
+public class CheckedMultiply extends BinaryOperator {
     public CheckedMultiply (CommonExpression left, CommonExpression right) {
         super(left, right);
     }
     @Override
     public int makeOperation(int left, int right) {
+        if (super.checkOverflow(left, right)) {
+            throw new OverflowException(left + " * " + right + " - overflows");
+        }
         return left * right;
     }
     @Override

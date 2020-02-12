@@ -30,7 +30,11 @@ public class CheckedNegate implements CommonExpression {
 
     @Override
     public int evaluate(int x) {
-        return -exp.evaluate(x);
+        int val = exp.evaluate(x);
+        if (val == Integer.MIN_VALUE) {
+            throw new OverflowException("-(" + val + ") - overflows");
+        }
+        return -val;
     }
 
     @Override
@@ -40,6 +44,10 @@ public class CheckedNegate implements CommonExpression {
 
     @Override
     public int evaluate(int x, int y, int z) {
-        return -exp.evaluate(x, y, z);
+        int val = exp.evaluate(x, y, z);
+        if (val == Integer.MIN_VALUE) {
+            throw new OverflowException("-(" + val + ") - overflows");
+        }
+        return -val;
     }
 }
