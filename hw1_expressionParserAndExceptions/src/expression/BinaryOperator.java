@@ -27,11 +27,13 @@ public abstract class BinaryOperator implements CommonExpression {
                 }
                 break;
             case "*":
+            case "**":
                 if (left != 0 && right != 0 && ((left * right) / right != left || (left * right) / left != right)) {
                     return true;
                 }
                 break;
             case "/":
+            case "//":
                 if (left == Integer.MIN_VALUE && right == -1) {
                     return true;
                 }

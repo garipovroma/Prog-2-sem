@@ -20,22 +20,27 @@ public class ExpressionParser extends BaseParser implements Parser {
             Token.MUL, 1,
             Token.DIV, 1,
             Token.ADD, 2,
-            Token.SUB, 2
+            Token.SUB, 2,
+            Token.POW, 0,
+            Token.LOG, 0
     );
     private static final Map<Integer, Set<Token>> getOperationsByPriority = Map.of(
             1, Set.of(Token.MUL, Token.DIV),
-            2, Set.of(Token.ADD, Token.SUB)
+            2, Set.of(Token.ADD, Token.SUB),
+            0, Set.of(Token.POW, Token.LOG)
     );
     private static final Set<Token> operators = Set.of(
-            Token.ADD, Token.SUB, Token.DIV, Token.MUL
+            Token.ADD, Token.SUB, Token.DIV, Token.MUL, Token.POW, Token.LOG
     );
     private static final Map<Token, String> getOperator = Map.of(
             Token.ADD, "+",
             Token.SUB, "-",
             Token.MUL, "*",
-            Token.DIV, "/"
+            Token.DIV, "/",
+            Token.POW, "**",
+            Token.LOG, "//"
     );
-    private static final int lowestPriority = 0;
+    private static final int lowestPriority = -1;
 
     @Override
     public CommonExpression parse(String expression) throws ParsingException {
@@ -75,11 +80,23 @@ public class ExpressionParser extends BaseParser implements Parser {
                 case '\0':
                     return curToken = Token.END;
                 case '*':
-                    nextChar();
-                    return curToken = Token.MUL;
+                    commonNextChar();
+                    if (ch == '*') {
+                        nextChar();
+                        return curToken = Token.POW;
+                    } else {
+                        skipWhitespaces();
+                        return curToken = Token.MUL;
+                    }
                 case '/':
-                    nextChar();
-                    return curToken = Token.DIV;
+                    commonNextChar();
+                    if (ch == '/') {
+                        nextChar();
+                        return curToken = Token.LOG;
+                    } else {
+                        skipWhitespaces();
+                        return curToken = Token.DIV;
+                    }
                 case '+':
                     nextChar();
                     return curToken = Token.ADD;
@@ -141,7 +158,7 @@ public class ExpressionParser extends BaseParser implements Parser {
                 }
                 return CheckedNegate.getNegative(parsePrimeExpression(true));
             case LBRACKET:
-                cur = parseExpression(2, true, true);
+                cur = parseExpression(highestPriority, true, true);
                 if (curToken != Token.RBRACKET) {
                     throw new BracketException(ExpressionException.createErrorMessage(
                             "Bracket not found after :" + cur.toString(), this));
@@ -194,6 +211,10 @@ public class ExpressionParser extends BaseParser implements Parser {
                 return new CheckedMultiply(left, right);
             case DIV:
                 return new CheckedDivide(left, right);
+            case POW:
+                return new CheckedPow(left, right);
+            case LOG:
+                return new CheckedLog(left, right);
         }
         throw new UndefinedOperatorException(ExpressionException.createErrorMessage(
                 operator + "- undefined operator", this));
