@@ -13,7 +13,22 @@ public class StringSource implements ExpressionSource {
             pos++;
         }
     }
-
+    @Override
+    public int getPos() {
+        return pos;
+    }
+    @Override
+    public String getSubstringWithError() {
+        int l = pos - 10;
+        if (l < 0) {
+            l = 0;
+        }
+        int r = pos + 10;
+        if (r > data.length()) {
+            r = data.length();
+        }
+        return data.substring(l, r);
+    }
     @Override
     public boolean hasNext() {
         skipWhitespaces();
