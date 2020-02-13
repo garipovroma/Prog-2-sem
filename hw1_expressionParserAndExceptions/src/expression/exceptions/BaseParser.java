@@ -3,7 +3,7 @@ package expression.exceptions;
 public class BaseParser {
     private ExpressionSource source;
     protected char ch;
-    public void createSource(ExpressionSource source) {
+    public void createSource(StringSource source) {
         this.source = source;
     }
     protected void commonNextChar() {
@@ -16,6 +16,12 @@ public class BaseParser {
         while (ch != '\0' && Character.isWhitespace(ch)) {
             commonNextChar();
         }
+    }
+    protected int getPos() {
+        return source.getPos();
+    }
+    protected String getSubstringWithError() {
+        return source.getSubstringWithError();
     }
     protected boolean test(char expected) {
         if (ch == expected) {

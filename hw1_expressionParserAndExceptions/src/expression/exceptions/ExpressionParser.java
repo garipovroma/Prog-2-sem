@@ -7,11 +7,12 @@ import java.util.Set;
 
 public class ExpressionParser extends BaseParser implements Parser {
     Token curToken = Token.NUM;
+    Token prevToken = Token.NUM;
     private int curConst;
     private String variableName;
     private boolean getNegativeConst = false;
-    private static final Set<Character> variablesName = Set.of(
-            'x', 'y', 'z'
+    private static final Set<String> variablesName = Set.of(
+            "x", "y", "z"
     );
 
     private static final int highestPriority = 2;
@@ -37,7 +38,7 @@ public class ExpressionParser extends BaseParser implements Parser {
     private static final int lowestPriority = 0;
 
     @Override
-    public CommonExpression parse(String expression) throws Exception {
+    public CommonExpression parse(String expression) throws ParsingException {
         createSource(new StringSource(expression));
         nextChar();
         getToken();
@@ -59,11 +60,13 @@ public class ExpressionParser extends BaseParser implements Parser {
         try {
             curConst = Integer.parseInt(value.toString());
         } catch (NumberFormatException e) {
-            throw error("Illegal constant :" + value.toString());
+            throw new IllegalConstantException(ExpressionException.createErrorMessage(
+                    "Illegal constant :" + value.toString(), this));
         }
         return curToken = Token.NUM;
     }
     private Token getToken() {
+        prevToken = curToken;
         if (between('0', '9')) {
             skipWhitespaces();
             return getConst();
@@ -92,17 +95,23 @@ public class ExpressionParser extends BaseParser implements Parser {
                 default:
                     if (Character.isAlphabetic(ch)) {
                         StringBuilder name = new StringBuilder();
-                        if (variablesName.contains(ch)) {
+                        skipWhitespaces();
+                        while (Character.isAlphabetic(ch)) {
                             name.append(ch);
-                            variableName = name.toString();
-                            nextChar();
+                            commonNextChar();
+                        }
+                        skipWhitespaces();
+                        variableName = name.toString();
+                        if (variablesName.contains(variableName)) {
                             return curToken = Token.NAME;
                         } else {
-                            throw new UndefinedVariableException(variableName.toString() +
-                                    " - undefined variable");
+                            throw new UndefinedVariableException(ExpressionException.createErrorMessage(
+                                    variableName.toString() +
+                                    " - undefined variable", this));
                         }
                     } else {
-                        throw new UnexpectedSignException(ch + " - undefined sign");
+                        throw new UnexpectedSignException(ExpressionException.createErrorMessage(
+                                ch + " - undefined sign", this));
                     }
             }
         }
@@ -134,12 +143,14 @@ public class ExpressionParser extends BaseParser implements Parser {
             case LBRACKET:
                 cur = parseExpression(2, true, true);
                 if (curToken != Token.RBRACKET) {
-                    throw new BracketException("Bracket not found after :" + cur.toString());
+                    throw new BracketException(ExpressionException.createErrorMessage(
+                            "Bracket not found after :" + cur.toString(), this));
                 }
                 getToken();
                 return cur;
             default:
-                throw new UnexpectedSignException(ch + " - unexpected sign");
+                throw new UnexpectedSignException(ExpressionException.createErrorMessage(
+                        ch + " - unexpected sign", this));
         }
     }
 
@@ -151,7 +162,8 @@ public class ExpressionParser extends BaseParser implements Parser {
             for ( ; ; ) {
                 Token curTok = curToken;
                 if (!operators.contains(curToken) && curToken != Token.END && curToken != Token.RBRACKET) {
-                    throw new UnexpectedSignException(getOperator.get(curToken) + " - unexpected sign");
+                    throw new UnexpectedSignException(ExpressionException.createErrorMessage(
+                            getOperator.get(curToken) + " - unexpected sign", this));
                 }
                 if (getOperationsByPriority.get(priority).contains(curToken)) {
                     CommonExpression curExpression = parseExpression(priority - 1,
@@ -162,10 +174,12 @@ public class ExpressionParser extends BaseParser implements Parser {
                 }
             }
             if (expectedRightBracket && curToken != Token.RBRACKET && priority == highestPriority) {
-                throw new BracketException("Expected ), but not found");
+                throw new BracketException(ExpressionException.createErrorMessage(
+                        "Expected )", this));
             }
             if (!expectedRightBracket && curToken == Token.RBRACKET) {
-                throw new BracketException("Unexpected )");
+                throw new BracketException(ExpressionException.createErrorMessage(
+                        "Unexpected )", this));
             }
             return res;
         }
@@ -181,6 +195,7 @@ public class ExpressionParser extends BaseParser implements Parser {
             case DIV:
                 return new CheckedDivide(left, right);
         }
-        throw new UndefinedOperatorException(operator + "- undefined operator");
+        throw new UndefinedOperatorException(ExpressionException.createErrorMessage(
+                operator + "- undefined operator", this));
     }
 }
