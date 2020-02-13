@@ -2,6 +2,7 @@ package expression;
 
 import expression.exceptions.CheckedDivide;
 import expression.exceptions.CheckedSubtract;
+import expression.exceptions.OverflowException;
 
 import java.util.Objects;
 
@@ -12,33 +13,7 @@ public abstract class BinaryOperator implements CommonExpression {
         this.right = right;
     }
     protected boolean checkOverflow(int left, int right) {
-        switch (getOperator()) {
-            case "+":
-                int val = left + right;
-                if ((left > 0 && right > 0 && val <= 0) || (left < 0 && right < 0 && val >= 0)) {
-                    return true;
-                }
-                break;
-            case "-":
-                val = left - right;
-                if ((left > 0 && right < 0 && val <= 0) || (left < 0 && right > 0 && val >= 0) ||
-                        (left == 0 && right == Integer.MIN_VALUE)) {
-                    return true;
-                }
-                break;
-            case "*":
-            case "**":
-                if (left != 0 && right != 0 && ((left * right) / right != left || (left * right) / left != right)) {
-                    return true;
-                }
-                break;
-            case "/":
-            case "//":
-                if (left == Integer.MIN_VALUE && right == -1) {
-                    return true;
-                }
-        }
-        return false;
+        return OverflowException.checkOverflow(left, right, getOperator());
     }
     protected boolean checkDivisionByZero(int left, int right) {
         return (getOperator() == "/" && right == 0);

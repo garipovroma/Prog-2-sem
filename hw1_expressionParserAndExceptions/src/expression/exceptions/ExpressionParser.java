@@ -113,12 +113,18 @@ public class ExpressionParser extends BaseParser implements Parser {
                     if (Character.isAlphabetic(ch)) {
                         StringBuilder name = new StringBuilder();
                         skipWhitespaces();
-                        while (Character.isAlphabetic(ch)) {
+                        while (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
                             name.append(ch);
                             commonNextChar();
                         }
                         skipWhitespaces();
                         variableName = name.toString();
+                        if (variableName.equals("log2")) {
+                            return curToken = Token.LOG2;
+                        }
+                        if (variableName.equals("pow2")) {
+                            return curToken = Token.POW2;
+                        }
                         if (variablesName.contains(variableName)) {
                             return curToken = Token.NAME;
                         } else {
@@ -157,6 +163,22 @@ public class ExpressionParser extends BaseParser implements Parser {
                     return cur;
                 }
                 return CheckedNegate.getNegative(parsePrimeExpression(true));
+            case LOG2:
+                if (testBetween('0', '9')) {
+                    getToken();
+                    cur = CheckedLog2.getLog2(new Const(curConst));
+                    getToken();
+                    return cur;
+                }
+                return CheckedLog2.getLog2(parsePrimeExpression(true));
+            case POW2:
+                if (testBetween('0', '9')) {
+                    getToken();
+                    cur = CheckedPow2.getPow2(new Const(curConst));
+                    getToken();
+                    return cur;
+                }
+                return CheckedPow2.getPow2(parsePrimeExpression(true));
             case LBRACKET:
                 cur = parseExpression(highestPriority, true, true);
                 if (curToken != Token.RBRACKET) {

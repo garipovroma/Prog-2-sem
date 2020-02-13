@@ -16,9 +16,9 @@ public class ExceptionsPowLogTest extends ExceptionsTest {
         ));
 
         tests.addAll(List.of(
-           //     op("2 ** 3", (x, y, z) -> 8),
-         //       op("4 ** 3 ** 2", (x, y, z) -> 4096),
-           //     op("2 ** 3 * 3", (x, y, z) -> 24),
+                op("2 ** 3", (x, y, z) -> 8),
+                op("4 ** 3 ** 2", (x, y, z) -> 4096),
+                op("2 ** 3 * 3", (x, y, z) -> 24),
                 op("x ** (y * z)", (x, y, z) -> power(x, y * z)),
                 op("2 ** x + 1", (x, y, z) -> power(2, x) + 1),
                 op("-1 ** (3 ** x)", (x, y, z) -> x < 0 ? error(POWER) : -1),
