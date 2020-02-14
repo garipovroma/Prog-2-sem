@@ -24,18 +24,21 @@ public class CheckedLog2 implements CommonExpression {
     public String toString() {
         return this.toMiniString();
     }
-
-    @Override
-    public int evaluate(int x) {
-        int y = exp.evaluate(x), res = 0;
-        if (y <= 0) {
-            throw new InvalidLogArgumentsException("Invalid log arguments = " + y);
-        }
-        while (y >= 2) {
-            y /= 2;
+    public int getLog2(int x) {
+        int res = 0;
+        while (x >= 2) {
+            x >>= 1;
             res++;
         }
         return res;
+    }
+    @Override
+    public int evaluate(int x) {
+        int y = exp.evaluate(x);
+        if (y <= 0) {
+            throw new InvalidLogArgumentsException("Invalid log arguments = " + y);
+        }
+        return getLog2(y);
     }
 
     @Override
@@ -45,14 +48,10 @@ public class CheckedLog2 implements CommonExpression {
 
     @Override
     public int evaluate(int x, int y, int z) {
-        int k = exp.evaluate(x, y, z), res = 0;
+        int k = exp.evaluate(x, y, z);
         if (k <= 0) {
             throw new InvalidLogArgumentsException("Invalid log arguments = " + k);
         }
-        while (k >= 2) {
-            k /= 2;
-            res++;
-        }
-        return res;
+        return getLog2(k);
     }
 }

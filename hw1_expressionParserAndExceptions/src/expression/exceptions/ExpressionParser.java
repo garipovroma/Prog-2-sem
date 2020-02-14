@@ -70,6 +70,16 @@ public class ExpressionParser extends BaseParser implements Parser {
         }
         return curToken = Token.NUM;
     }
+    private String getVariableName() {
+        StringBuilder name = new StringBuilder();
+        skipWhitespaces();
+        while (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
+            name.append(ch);
+            commonNextChar();
+        }
+        skipWhitespaces();
+        return name.toString();
+    }
     private Token getToken() {
         prevToken = curToken;
         if (between('0', '9')) {
@@ -80,21 +90,15 @@ public class ExpressionParser extends BaseParser implements Parser {
                 case '\0':
                     return curToken = Token.END;
                 case '*':
-                    commonNextChar();
-                    if (ch == '*') {
-                        nextChar();
+                    if (check("**")) {
                         return curToken = Token.POW;
                     } else {
-                        skipWhitespaces();
                         return curToken = Token.MUL;
                     }
                 case '/':
-                    commonNextChar();
-                    if (ch == '/') {
-                        nextChar();
+                    if (check("//")) {
                         return curToken = Token.LOG;
                     } else {
-                        skipWhitespaces();
                         return curToken = Token.DIV;
                     }
                 case '+':
@@ -111,14 +115,7 @@ public class ExpressionParser extends BaseParser implements Parser {
                     return curToken = Token.RBRACKET;
                 default:
                     if (Character.isAlphabetic(ch)) {
-                        StringBuilder name = new StringBuilder();
-                        skipWhitespaces();
-                        while (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
-                            name.append(ch);
-                            commonNextChar();
-                        }
-                        skipWhitespaces();
-                        variableName = name.toString();
+                        variableName = getVariableName();
                         if (variableName.equals("log2")) {
                             return curToken = Token.LOG2;
                         }
