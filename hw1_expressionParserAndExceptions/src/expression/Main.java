@@ -27,7 +27,9 @@ public class Main {
          //CommonExpression e = (CommonExpression) myParser.parse("10 20");
         //CommonExpression e = (CommonExpression) myParser.parse("10 20");
         //CommonExpression e = (CommonExpression) myParser.parse("-(-(-\t\t-5 + 16   *x*y) + 1 * z) -(((-11)))");
-        CommonExpression e = (CommonExpression) myParser.parse("pow2(x * y * z)");
-       System.out.println(e.evaluate(0, 0, 0));
+        //CommonExpression e = (CommonExpression) myParser.parse("pow2(x * y * z)");
+        CommonExpression e = (CommonExpression) myParser.parse("- ((- (z)))");
+       System.out.println(e.evaluate(1184085801, 756721621, -771528684));
     }
 }
+

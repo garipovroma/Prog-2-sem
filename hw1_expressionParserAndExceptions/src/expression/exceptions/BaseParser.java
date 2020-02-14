@@ -17,10 +17,10 @@ public class BaseParser {
             commonNextChar();
         }
     }
-    protected int getPos() {
+    public int getPos() {
         return source.getPos();
     }
-    protected String getSubstringWithError() {
+    public String getSubstringWithError() {
         return source.getSubstringWithError();
     }
     protected boolean test(char expected) {

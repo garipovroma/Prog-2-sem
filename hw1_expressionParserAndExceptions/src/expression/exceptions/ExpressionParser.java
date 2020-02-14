@@ -1,6 +1,8 @@
 package expression.exceptions;
 
 import expression.*;
+import expression.exceptions.expressionExceptions.*;
+import expression.exceptions.operators.*;
 
 import java.util.Map;
 import java.util.Set;
@@ -125,9 +127,9 @@ public class ExpressionParser extends BaseParser implements Parser {
                         if (variablesName.contains(variableName)) {
                             return curToken = Token.NAME;
                         } else {
-                            throw new UndefinedVariableException(ExpressionException.createErrorMessage(
+                            throw new UndefinedVariableOrOperatorException(ExpressionException.createErrorMessage(
                                     variableName.toString() +
-                                    " - undefined variable", this));
+                                    " - undefined variable or operator", this));
                         }
                     } else {
                         throw new UnexpectedSignException(ExpressionException.createErrorMessage(

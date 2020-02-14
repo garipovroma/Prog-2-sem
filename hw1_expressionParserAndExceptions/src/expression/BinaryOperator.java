@@ -1,8 +1,8 @@
 package expression;
 
-import expression.exceptions.CheckedDivide;
-import expression.exceptions.CheckedSubtract;
-import expression.exceptions.OverflowException;
+import expression.exceptions.operators.CheckedDivide;
+import expression.exceptions.operators.CheckedSubtract;
+import expression.exceptions.expressionExceptions.OverflowException;
 
 import java.util.Objects;
 

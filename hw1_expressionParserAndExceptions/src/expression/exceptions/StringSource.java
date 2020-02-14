@@ -1,5 +1,7 @@
 package expression.exceptions;
 
+import expression.exceptions.expressionExceptions.ExpressionException;
+
 public class StringSource implements ExpressionSource {
     private final String data;
     private int pos;

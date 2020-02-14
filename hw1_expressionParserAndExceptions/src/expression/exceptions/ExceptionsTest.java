@@ -2,6 +2,7 @@ package expression.exceptions;
 
 import expression.TripleExpression;
 import expression.Variable;
+import expression.exceptions.operators.*;
 
 import java.util.ArrayList;
 import java.util.List;
