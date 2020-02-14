@@ -30,6 +30,19 @@ public class BaseParser {
         }
         return false;
     }
+    protected boolean check(String s) {
+        int n = s.length();
+        for (int i = 0; i < n; i++) {
+            if (ch == s.charAt(i)) {
+                commonNextChar();
+            } else {
+                skipWhitespaces();
+                return false;
+            }
+        }
+        nextChar();
+        return true;
+    }
     protected boolean testBetween(char l, char r) {
         if (l <= ch && ch <= r) {
             return true;
