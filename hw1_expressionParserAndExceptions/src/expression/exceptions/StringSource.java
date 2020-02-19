@@ -33,21 +33,12 @@ public class StringSource implements ExpressionSource {
     }
     @Override
     public boolean hasNext() {
-        skipWhitespaces();
         return pos < data.length();
     }
 
     @Override
     public char next() {
         return data.charAt(pos++);
-    }
-    @Override
-    public char commonNext() {
-        return data.charAt(pos++);
-    }
-    @Override
-    public boolean commonHasNext() {
-        return pos < data.length();
     }
     @Override
     public ExpressionException error(String message) {

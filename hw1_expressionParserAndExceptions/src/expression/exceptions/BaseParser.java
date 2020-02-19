@@ -6,48 +6,27 @@ public class BaseParser {
     public void createSource(StringSource source) {
         this.source = source;
     }
-    protected void commonNextChar() {
-        ch = source.commonHasNext() ? source.commonNext() : '\0';
-    }
     protected void nextChar() {
         ch = source.hasNext() ? source.next() : '\0';
     }
-    protected void skipWhitespaces() {
-        while (ch != '\0' && Character.isWhitespace(ch)) {
-            commonNextChar();
-        }
-    }
-    public int getPos() {
-        return source.getPos();
-    }
-    public String getSubstringWithError() {
-        return source.getSubstringWithError();
-    }
-    protected boolean test(char expected) {
-        if (ch == expected) {
+    public void skipWhitespaces() {
+        while (Character.isWhitespace(ch)) {
             nextChar();
-            return true;
         }
-        return false;
     }
-    protected boolean check(String s) {
+    public boolean check(char x) {
+        return (between(x, x));
+    }
+    public boolean check (String s) {
         int n = s.length();
         for (int i = 0; i < n; i++) {
-            if (ch == s.charAt(i)) {
-                commonNextChar();
+            if (check(s.charAt(i))) {
+                nextChar();
             } else {
-                skipWhitespaces();
                 return false;
             }
         }
-        nextChar();
         return true;
-    }
-    protected boolean testBetween(char l, char r) {
-        if (l <= ch && ch <= r) {
-            return true;
-        }
-        return false;
     }
     protected void expect(final char value) {
         if (ch != value) {
@@ -65,5 +44,18 @@ public class BaseParser {
     }
     protected boolean between(char l, char r) {
         return (l <= ch && ch <= r);
+    }
+    public int getPos() {
+        return source.getPos();
+    }
+    public String getSubstringWithError() {
+        return source.getSubstringWithError();
+    }
+    protected boolean test(char expected) {
+        if (ch == expected) {
+            nextChar();
+            return true;
+        }
+        return false;
     }
 }

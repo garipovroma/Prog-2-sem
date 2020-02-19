@@ -17,9 +17,6 @@ public class CheckedLog extends BinaryOperator {
             throw new InvalidLogArgumentsException("Invalid log arguments left = " + left + ", right = " + right);
         }
         while (x >= right) {
-            if (super.checkOverflow(x, right)) {
-                throw new OverflowException(left + " // " + right + " - overflows");
-            }
             x /= right;
             res++;
         }

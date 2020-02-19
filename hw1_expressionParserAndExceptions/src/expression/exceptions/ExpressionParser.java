@@ -9,15 +9,18 @@ import java.util.Set;
 
 public class ExpressionParser extends BaseParser implements Parser {
     Token curToken = Token.NUM;
-    Token prevToken = Token.NUM;
-    private int curConst;
-    private String variableName;
-    private boolean getNegativeConst = false;
+    private int constValue;
+    private String curString;
+    private boolean isNegative = false;
+    private boolean haveToken = false;
     private static final Set<String> variablesName = Set.of(
             "x", "y", "z"
     );
-
     private static final int highestPriority = 2;
+    private static final Map<String, Token> operatorsWithStrName = Map.of(
+            "log2", Token.LOG2,
+            "pow2", Token.POW2
+    );
     private static final Map<Token, Integer> priority = Map.of(
             Token.MUL, 1,
             Token.DIV, 1,
@@ -42,161 +45,153 @@ public class ExpressionParser extends BaseParser implements Parser {
             Token.POW, "**",
             Token.LOG, "//"
     );
-    private static final int lowestPriority = -1;
-
-    @Override
-    public CommonExpression parse(String expression) throws ParsingException {
-        createSource(new StringSource(expression));
-        nextChar();
-        getToken();
-        CommonExpression commonExpression = parseExpression(highestPriority, false, false);
-        return commonExpression;
-    }
+    private final int lowestPriority = -1;
     private Token getConst() {
         StringBuilder value = new StringBuilder();
-        if (getNegativeConst) {
+        if (isNegative) {
             value.append("-");
-            getNegativeConst = false;
+            isNegative = false;
         }
-        skipWhitespaces();
-        while (between('0', '9')) {
+        while(between('0', '9')) {
             value.append(ch);
-            commonNextChar();
+            nextChar();
         }
-        skipWhitespaces();
         try {
-            curConst = Integer.parseInt(value.toString());
+            constValue = Integer.parseInt(value.toString());
         } catch (NumberFormatException e) {
             throw new IllegalConstantException(ExpressionException.createErrorMessage(
                     "Illegal constant :" + value.toString(), this));
         }
         return curToken = Token.NUM;
     }
-    private String getVariableName() {
-        StringBuilder name = new StringBuilder();
-        skipWhitespaces();
+    private String getString() {
+        StringBuilder value = new StringBuilder();
         while (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
-            name.append(ch);
-            commonNextChar();
+            value.append(ch);
+            nextChar();
         }
+        return value.toString();
+    }
+    private Token getToken() {  // before all of reading from source - do skipWhitespaces();
         skipWhitespaces();
-        return name.toString();
-    }
-    private Token getToken() {
-        prevToken = curToken;
         if (between('0', '9')) {
-            skipWhitespaces();
             return getConst();
-        } else {
-            switch  (ch) {
-                case '\0':
-                    return curToken = Token.END;
-                case '*':
-                    if (check("**")) {
-                        return curToken = Token.POW;
+        }
+        switch (ch) {
+            case '\0':
+                return curToken = Token.END;
+            case '*':
+                if (check("**")) {
+                    return curToken = Token.POW;
+                }
+                return curToken = Token.MUL;
+            case '/':
+                if (check("//")) {
+                    return curToken = Token.LOG;
+                }
+                return curToken = Token.DIV;
+            case '+':
+                nextChar();
+                return curToken = Token.ADD;
+            case '-':
+                nextChar();
+                return curToken = Token.SUB;
+            case '(':
+                nextChar();
+                return curToken = Token.LBRACKET;
+            case ')':
+                nextChar();
+                return curToken = Token.RBRACKET;
+            default:
+                if (Character.isAlphabetic(ch)) {
+                    curString = getString();
+                    if (variablesName.contains(curString)) {
+                        return curToken = Token.NAME;
+                    } else if (operatorsWithStrName.containsKey(curString)) {
+                        return curToken = operatorsWithStrName.get(curString);
                     } else {
-                        return curToken = Token.MUL;
+                        throw new UndefinedVariableOrOperatorException(ExpressionException.createErrorMessage(
+                                curString.toString() +
+                                        " - undefined variable or operator", this));
                     }
-                case '/':
-                    if (check("//")) {
-                        return curToken = Token.LOG;
-                    } else {
-                        return curToken = Token.DIV;
-                    }
-                case '+':
-                    nextChar();
-                    return curToken = Token.ADD;
-                case '-':
-                    nextChar();
-                    return curToken = Token.SUB;
-                case '(':
-                    nextChar();
-                    return curToken = Token.LBRACKET;
-                case ')':
-                    nextChar();
-                    return curToken = Token.RBRACKET;
-                default:
-                    if (Character.isAlphabetic(ch)) {
-                        variableName = getVariableName();
-                        if (variableName.equals("log2")) {
-                            return curToken = Token.LOG2;
-                        }
-                        if (variableName.equals("pow2")) {
-                            return curToken = Token.POW2;
-                        }
-                        if (variablesName.contains(variableName)) {
-                            return curToken = Token.NAME;
-                        } else {
-                            throw new UndefinedVariableOrOperatorException(ExpressionException.createErrorMessage(
-                                    variableName.toString() +
-                                    " - undefined variable or operator", this));
-                        }
-                    } else {
-                        throw new UnexpectedSignException(ExpressionException.createErrorMessage(
-                                ch + " - undefined sign", this));
-                    }
-            }
+                } else {
+                    throw new UnexpectedSignException(ExpressionException.createErrorMessage(
+                            ch + " - undefined sign", this));
+                }
+
         }
     }
-
-    private CommonExpression parsePrimeExpression(boolean get) {
+    @Override
+    public CommonExpression parse(String expression) throws ExpressionException {
+        createSource(new StringSource(expression));
+        nextChar();
+        getToken();
+        CommonExpression res = parseExpression(highestPriority, false, false);
+        return res;
+    }
+    private CommonExpression parsePrimeExpression(boolean get, boolean needBracket) {
         if (get) {
             getToken();
         }
+        CommonExpression res = null;
+        skipWhitespaces();
         switch (curToken) {
-            case NUM:
-                CommonExpression cur = new Const(curConst);
-                skipWhitespaces();
-                getToken();
-                return cur;
             case NAME:
-                CommonExpression variable = new Variable(variableName);
+                res = new Variable(curString);
                 getToken();
-                return variable;
+                break;
+            case NUM:
+                res = new Const(constValue);
+                getToken();
+                break;
             case SUB:
-                if (testBetween('0', '9')) {
-                    getNegativeConst = true;
+                if (between('0', '9')) {
+                    isNegative = true;
                     getToken();
-                    cur = new Const(curConst);
+                    res = new Const(constValue);
                     getToken();
-                    return cur;
+                    return res;
                 }
-                return CheckedNegate.getNegative(parsePrimeExpression(true));
+                res = CheckedNegate.getNegative(parsePrimeExpression(true, needBracket));
+                break;
             case LOG2:
-                if (testBetween('0', '9')) {
+                if (between('0', '9')) {
                     getToken();
-                    cur = CheckedLog2.getLog2(new Const(curConst));
+                    res = CheckedLog2.getLog2(new Const(constValue));
                     getToken();
-                    return cur;
+                    return res;
                 }
-                return CheckedLog2.getLog2(parsePrimeExpression(true));
+                return CheckedLog2.getLog2(parsePrimeExpression(true, needBracket));
             case POW2:
-                if (testBetween('0', '9')) {
+                if (between('0', '9')) {
                     getToken();
-                    cur = CheckedPow2.getPow2(new Const(curConst));
+                    res = CheckedPow2.getPow2(new Const(constValue));
                     getToken();
-                    return cur;
+                    return res;
                 }
-                return CheckedPow2.getPow2(parsePrimeExpression(true));
+                return CheckedPow2.getPow2(parsePrimeExpression(true, needBracket));
             case LBRACKET:
-                cur = parseExpression(highestPriority, true, true);
+                res = parseExpression(highestPriority, true, true);
                 if (curToken != Token.RBRACKET) {
                     throw new BracketException(ExpressionException.createErrorMessage(
-                            "Bracket not found after :" + cur.toString(), this));
+                            "Bracket not found after :" + res.toString(), this));
                 }
                 getToken();
-                return cur;
+                break;
             default:
-                throw new UnexpectedSignException(ExpressionException.createErrorMessage(
-                        ch + " - unexpected sign", this));
+                if (res == null) {
+                    throw new UnexpectedSignException(ExpressionException.createErrorMessage(
+                            ch + " - unexpected sign", this));
+                }
         }
+        return res;
     }
-
-    private CommonExpression parseExpression(int priority, boolean get, boolean expectedRightBracket) {
+    private CommonExpression parseExpression(int priority, boolean get, boolean needBracket) {
         if (priority == lowestPriority) {
-            return parsePrimeExpression(get);
+            CommonExpression res = parsePrimeExpression(get, needBracket);
+            return res;
         } else {
-            CommonExpression res = parseExpression(priority - 1, get, expectedRightBracket);
+            CommonExpression res = parseExpression(priority - 1, get, needBracket);
             for ( ; ; ) {
                 Token curTok = curToken;
                 if (!operators.contains(curToken) && curToken != Token.END && curToken != Token.RBRACKET) {
@@ -205,17 +200,17 @@ public class ExpressionParser extends BaseParser implements Parser {
                 }
                 if (getOperationsByPriority.get(priority).contains(curToken)) {
                     CommonExpression curExpression = parseExpression(priority - 1,
-                            true, expectedRightBracket);
+                            true,  needBracket);
                     res = makeExpression(res, curExpression, curTok);
                 } else {
                     break;
                 }
             }
-            if (expectedRightBracket && curToken != Token.RBRACKET && priority == highestPriority) {
+            if (needBracket && curToken != Token.RBRACKET && priority == highestPriority) {
                 throw new BracketException(ExpressionException.createErrorMessage(
                         "Expected )", this));
             }
-            if (!expectedRightBracket && curToken == Token.RBRACKET) {
+            if (!needBracket && curToken == Token.RBRACKET && priority == highestPriority) {
                 throw new BracketException(ExpressionException.createErrorMessage(
                         "Unexpected )", this));
             }
