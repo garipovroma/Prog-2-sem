@@ -4,6 +4,7 @@ import expression.CommonExpression;
 import expression.UnaryOperator;
 import expression.exceptions.expressionExceptions.InvalidPowArgumentsException;
 import expression.exceptions.expressionExceptions.OverflowException;
+import expression.exceptions.expressionExceptions.PowOverflowException;
 
 public class CheckedPow2 extends UnaryOperator {
     public CheckedPow2(CommonExpression exp) {
@@ -16,7 +17,7 @@ public class CheckedPow2 extends UnaryOperator {
             throw new InvalidPowArgumentsException("pow2 " + val + " - invalid pow2 arguments");
         }
         if (val >= 32) {
-            throw new OverflowException("pow2 " + val + " - overflows");
+            throw new PowOverflowException("pow2 " + val + " - overflows");
         }
         return (1 << val);
     }

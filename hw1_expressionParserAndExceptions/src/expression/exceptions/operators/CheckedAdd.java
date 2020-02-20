@@ -2,7 +2,7 @@ package expression.exceptions.operators;
 
 import expression.BinaryOperator;
 import expression.CommonExpression;
-import expression.exceptions.expressionExceptions.OverflowException;
+import expression.exceptions.expressionExceptions.AddOverflowException;
 
 public class CheckedAdd extends BinaryOperator {
     public CheckedAdd (CommonExpression left, CommonExpression right) {
@@ -11,7 +11,7 @@ public class CheckedAdd extends BinaryOperator {
     @Override
     public int makeOperation(int left, int right) {
         if (super.checkOverflow(left, right)) {
-            throw new OverflowException(left + " + " + right + " - overflows");
+            throw new AddOverflowException(left + " + " + right + " - overflows");
         }
         return left + right;
     }

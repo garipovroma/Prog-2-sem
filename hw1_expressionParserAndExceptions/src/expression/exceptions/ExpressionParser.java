@@ -12,7 +12,6 @@ public class ExpressionParser extends BaseParser implements Parser {
     private int constValue;
     private String curString;
     private boolean isNegative = false;
-    private boolean haveToken = false;
     private static final Set<String> variablesName = Set.of(
             "x", "y", "z"
     );
@@ -126,8 +125,7 @@ public class ExpressionParser extends BaseParser implements Parser {
         createSource(new StringSource(expression));
         nextChar();
         getToken();
-        CommonExpression res = parseExpression(highestPriority, false, false);
-        return res;
+        return parseExpression(highestPriority, false, false);
     }
     private CommonExpression parsePrimeExpression(boolean get, boolean needBracket) {
         if (get) {
@@ -179,17 +177,14 @@ public class ExpressionParser extends BaseParser implements Parser {
                 getToken();
                 break;
             default:
-                if (res == null) {
-                    throw new UnexpectedSignException(ExpressionException.createErrorMessage(
-                            ch + " - unexpected sign", this));
-                }
+                throw new UnexpectedSignException(ExpressionException.createErrorMessage(
+                        ch + " - unexpected sign", this));
         }
         return res;
     }
     private CommonExpression parseExpression(int priority, boolean get, boolean needBracket) {
         if (priority == lowestPriority) {
-            CommonExpression res = parsePrimeExpression(get, needBracket);
-            return res;
+            return parsePrimeExpression(get, needBracket);
         } else {
             CommonExpression res = parseExpression(priority - 1, get, needBracket);
             for ( ; ; ) {

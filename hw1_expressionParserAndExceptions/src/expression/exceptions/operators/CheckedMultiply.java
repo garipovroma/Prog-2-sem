@@ -2,6 +2,7 @@ package expression.exceptions.operators;
 
 import expression.BinaryOperator;
 import expression.CommonExpression;
+import expression.exceptions.expressionExceptions.DivOverflowException;
 import expression.exceptions.expressionExceptions.OverflowException;
 
 public class CheckedMultiply extends BinaryOperator {
@@ -11,7 +12,7 @@ public class CheckedMultiply extends BinaryOperator {
     @Override
     public int makeOperation(int left, int right) {
         if (super.checkOverflow(left, right)) {
-            throw new OverflowException(left + " * " + right + " - overflows");
+            throw new DivOverflowException(left + " * " + right + " - overflows");
         }
         return left * right;
     }

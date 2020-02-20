@@ -5,6 +5,7 @@ import expression.CommonExpression;
 import expression.exceptions.expressionExceptions.DivideByZeroException;
 import expression.exceptions.expressionExceptions.InvalidPowArgumentsException;
 import expression.exceptions.expressionExceptions.OverflowException;
+import expression.exceptions.expressionExceptions.PowOverflowException;
 
 public class CheckedPow extends BinaryOperator {
     public CheckedPow (CommonExpression left, CommonExpression right) {
@@ -45,7 +46,7 @@ public class CheckedPow extends BinaryOperator {
         }
         int x = bin_pow(left, right);
         if (overflow) {
-            throw new OverflowException(left + " ** " + right + " - overflows");
+            throw new PowOverflowException(left + " ** " + right + " - overflows");
         }
         return x;
     }

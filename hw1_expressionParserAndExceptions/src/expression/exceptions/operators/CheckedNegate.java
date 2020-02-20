@@ -3,6 +3,7 @@ package expression.exceptions.operators;
 import expression.CommonExpression;
 import expression.Const;
 import expression.UnaryOperator;
+import expression.exceptions.expressionExceptions.NegateOverflowException;
 import expression.exceptions.expressionExceptions.OverflowException;
 
 public class CheckedNegate extends UnaryOperator {
@@ -13,7 +14,7 @@ public class CheckedNegate extends UnaryOperator {
     @Override
     public int makeOperation(int val) {
         if (val == Integer.MIN_VALUE) {
-            throw new OverflowException("-(" + val + ") - overflows");
+            throw new NegateOverflowException("-(" + val + ") - overflows");
         }
         return -val;
     }

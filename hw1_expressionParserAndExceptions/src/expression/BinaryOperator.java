@@ -13,7 +13,22 @@ public abstract class BinaryOperator implements CommonExpression {
         this.right = right;
     }
     protected boolean checkOverflow(int left, int right) {
-        return OverflowException.checkOverflow(left, right, getOperator());
+        switch (getOperator()) {
+            case "+":
+                return ((right > 0 && Integer.MAX_VALUE - right < left)
+                        || (right < 0 && Integer.MIN_VALUE - right > left));
+            case "-":
+                return ((right < 0 && Integer.MAX_VALUE + right < left)
+                        || (right > 0 && Integer.MIN_VALUE + right > left));
+            case "*":
+            case "**":
+                return (left != 0 && right != 0 &&
+                        ((left * right) / right != left || (left * right) / left != right));
+            case "/":
+            case "//":
+                return (left == Integer.MIN_VALUE && right == -1);
+        }
+        return false;
     }
     protected boolean checkDivisionByZero(int left, int right) {
         return (getOperator() == "/" && right == 0);
