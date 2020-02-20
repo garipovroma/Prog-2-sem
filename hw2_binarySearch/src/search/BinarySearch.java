@@ -34,7 +34,7 @@ public class BinarySearch {
         // it works!
         return l + 1;
     }
-    //post : res in [0; n], a[res] <= x && a[l] > x
+    //post : res in [0; n], a[res] <= x && a[res - 1] > x
 
     // Inv : predicate(arr[l], x) = false, predicate(arr[r], x) = true
     public static int get(int l, int r, int x, int arr[]) {
@@ -62,7 +62,7 @@ public class BinarySearch {
     public static int recursiveBinarySearch(int x, int arr[]) {
         return get(-1, arr.length, x, arr);
     }
-    //post : res in [0; n], a[res] <= x && a[l] > x
+    //post : res in [0; n], a[res] <= x && a[res - 1] > x
 
     public static void main(String[] args) {
         int n = args.length - 1;
