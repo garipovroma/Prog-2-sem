@@ -1,6 +1,7 @@
 package search;
 
 public class BinarySearchSpan {
+    // pred : args.length() > 0
     public static void main(String[] args) {
         int n = args.length - 1;
         int x = Integer.parseInt(args[0]);
