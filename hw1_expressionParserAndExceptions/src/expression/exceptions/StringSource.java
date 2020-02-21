@@ -1,7 +1,5 @@
 package expression.exceptions;
 
-import expression.exceptions.expressionExceptions.ExpressionException;
-
 public class StringSource implements ExpressionSource {
     private final String data;
     private int pos;
@@ -9,11 +7,6 @@ public class StringSource implements ExpressionSource {
     public StringSource(String data) {
         this.data = data;
         this.pos = 0;
-    }
-    private void skipWhitespaces() {
-        while (pos < data.length() && Character.isWhitespace(data.charAt(pos))) {
-            pos++;
-        }
     }
     @Override
     public int getPos() {
@@ -39,9 +32,5 @@ public class StringSource implements ExpressionSource {
     @Override
     public char next() {
         return data.charAt(pos++);
-    }
-    @Override
-    public ExpressionException error(String message) {
-        return new ExpressionException(pos + ": " + message);
     }
 }

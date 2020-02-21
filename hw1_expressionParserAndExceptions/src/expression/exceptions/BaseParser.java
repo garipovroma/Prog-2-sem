@@ -28,20 +28,6 @@ public class BaseParser {
         }
         return true;
     }
-    protected void expect(final char value) {
-        if (ch != value) {
-            throw error("Expected '" + value + "' , found '" + ch + "'");
-        }
-        nextChar();
-    }
-    protected void expect(final String value) {
-        for (char c : value.toCharArray()) {
-            expect(c);
-        }
-    }
-    protected RuntimeException error(final String message) {
-        return source.error(message);
-    }
     protected boolean between(char l, char r) {
         return (l <= ch && ch <= r);
     }
