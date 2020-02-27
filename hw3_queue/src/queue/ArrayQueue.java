@@ -4,39 +4,45 @@ import java.util.Arrays;
 
 public class ArrayQueue {
     private Object[] elements = new Object[5];
-    private int l = 0, r = 0, size = 0;
+    private int l = 0, size = 0;
     private void ensureCapacity(int capacity) {
         if (capacity > elements.length) {
-            Object[] newElements = new Object[capacity * 2];
-            int pos = l;
-            for (int i = 0; i < size; i++) {
-                if (pos == elements.length) {
-                    pos = 0;
-                }
-                newElements[i] = elements[pos++];
-            }
-            l = 0;
-            r = size;
+            Object[] newElements = new Object[2 * capacity];
+            System.arraycopy(elements, l, newElements, 0, elements.length - l);
+            System.arraycopy(elements, 0, newElements, elements.length - l, l);
             elements = newElements;
+            l = 0;
         }
+    }
+    public void push(Object element) {
+        assert element != null;
+        ensureCapacity(size + 1);
+        elements[(l + elements.length - 1) % elements.length] = element;
+        l = (l + elements.length - 1) % elements.length;
+        size++;
+    }
+    public Object peek() {
+        assert size > 0;
+        return elements[(l + size - 1) % elements.length];
+    }
+    public Object remove() {
+        assert size > 0;
+        Object value = peek();
+        elements[(l + size - 1) % elements.length] = null;
+        size--;
+        return value;
     }
     // post : q[0]...q[size - 1] - sequence of elements in queue, q' = [q[0], q[1] ... element], size' = size + 1
     public void enqueue(Object element) {
         assert element != null;
         ensureCapacity(size + 1);
-        if (r == elements.length) {
-            r = 0;
-        }
-        elements[r++] = element;
+        elements[(l + size) % elements.length] = element;
         size++;
     }
     // pred : size > 0
     // post : q[0]...q[size - 1] - sequence of elements in queue, res = q[0]
     public Object element() {
         assert size > 0;
-        if (l == elements.length) {
-            l = 0;
-        }
         return elements[l];
     }
     // pred : size > 0
@@ -46,6 +52,7 @@ public class ArrayQueue {
         assert size > 0;
         Object value = element();
         elements[l++] = null;
+        l %= elements.length;
         size--;
         return value;
     }
@@ -60,7 +67,6 @@ public class ArrayQueue {
     // post : queue is empty now, size = 0
     public void clear() {
         l = 0;
-        r = 0;
         size = 0;
         for (int i = 0; i < elements.length; i++) {
             elements[i] = null;
