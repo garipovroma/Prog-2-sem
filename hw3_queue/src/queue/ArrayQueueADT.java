@@ -3,6 +3,11 @@ package queue;
 import java.util.Arrays;
 
 public class ArrayQueueADT {
+    // INV of queue : we can add elements to queue end , delete them from end of queue,
+    // get element from begin of queue
+    // i-th added element will be i-th deleted element
+    // suppose that (size) = queue size, q[0] - begin of queue, q[size - 1] - end of queue
+    // for all i in 0 .. size - 1 : q[i] != null
     private Object[] elements = new Object[5];
     private int l = 0, size = 0;
     private static void ensureCapacity(ArrayQueueADT queue, int capacity) {
@@ -33,7 +38,8 @@ public class ArrayQueueADT {
         return value;
     }
 
-    // post : q[0]...q[size - 1] - sequence of elements in queue, q' = [q[0], q[1] ... element], size' = size + 1
+    // pred : element != null
+    // post : size' = size + 1, for all i in 0..size - 1 : q[i] = q[i]' && q[size' - 1] = element
     public static void enqueue(ArrayQueueADT queue, Object element) {
         assert element != null;
         ensureCapacity(queue, queue.size + 1);
@@ -41,14 +47,13 @@ public class ArrayQueueADT {
         queue.size++;
     }
     // pred : size > 0
-    // post : q[0]...q[size - 1] - sequence of elements in queue, res = q[0]
+    // post : res = q[size - 1], immutable
     public static Object element(ArrayQueueADT queue) {
         assert queue.size > 0;
         return queue.elements[queue.l];
     }
     // pred : size > 0
-    // post : q[0]...q[size - 1] - sequence of elements in queue,
-    //           res = q[0], q' = [q[1], q[2] ... q[size - 1]], size' = size - 1
+    // post: res = q[size - 1] && size' = size - 1 && for all i=1..size - 1 : q[i - 1]' = q[i]
     public static Object dequeue(ArrayQueueADT queue) {
         assert queue.size > 0;
         Object value = element(queue);
@@ -57,11 +62,11 @@ public class ArrayQueueADT {
         queue.size--;
         return value;
     }
-    // post : res = size
+    // post : res = size, immutable
     public static int size(ArrayQueueADT queue) {
         return queue.size;
     }
-    // post : res = true in case size = 0
+    // post : res = true in case size = 0, immutable
     public static boolean isEmpty(ArrayQueueADT queue) {
         return (queue.size == 0);
     }
