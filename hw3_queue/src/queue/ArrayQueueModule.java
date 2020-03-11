@@ -19,6 +19,8 @@ public class ArrayQueueModule {
             l = 0;
         }
     }
+    // pred : element != null
+    // post : size' = size + 1, for all i in 0..size - 1 : q[i] = q'[i + 1] && q[0]' == element
     public static void push(Object element) {
         assert element != null;
         ensureCapacity(size + 1);
@@ -26,10 +28,14 @@ public class ArrayQueueModule {
         l = (l + elements.length - 1) % elements.length;
         size++;
     }
+    // pred : size > 0
+    // post : res = q[0], immutable
     public static Object peek() {
         assert size > 0;
         return elements[(l + size - 1) % elements.length];
     }
+    // pred : size > 0
+    // post: res = q[0] && size' = size - 1 && for all i=0..size - 2 : q'[i] = q[i + 1]
     public static Object remove() {
         assert size > 0;
         Object value = peek();

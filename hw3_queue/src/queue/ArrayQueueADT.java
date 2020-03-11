@@ -19,6 +19,8 @@ public class ArrayQueueADT {
             queue.l = 0;
         }
     }
+    // pred : element != null
+    // post : size' = size + 1, for all i in 0..size - 1 : q[i] = q'[i + 1] && q[0]' == element
     public static void push(ArrayQueueADT queue, Object element) {
         assert element != null;
         ensureCapacity(queue,queue.size + 1);
@@ -26,10 +28,14 @@ public class ArrayQueueADT {
         queue.l = (queue.l + queue.elements.length - 1) % queue.elements.length;
         queue.size++;
     }
+    // pred : size > 0
+    // post : res = q[0], immutable
     public static Object peek(ArrayQueueADT queue) {
         assert queue.size > 0;
         return queue.elements[(queue.l + queue.size - 1) % queue.elements.length];
     }
+    // pred : size > 0
+    // post: res = q[0] && size' = size - 1 && for all i=0..size - 2 : q'[i] = q[i + 1]
     public static Object remove(ArrayQueueADT queue) {
         assert queue.size > 0;
         Object value = peek(queue);
