@@ -5,6 +5,7 @@ import java.util.Arrays;
 public class ArrayQueue extends AbstractQueue {
     private int l = 0;
     private Object[] elements = new Object[5];
+    public ArrayQueue() {};
     private void ensureCapacity(int capacity) {
         if (capacity > elements.length) {
             Object[] newElements = new Object[2 * capacity];
@@ -42,5 +43,10 @@ public class ArrayQueue extends AbstractQueue {
         for (int i = 0; i < elements.length; i++) {
             elements[i] = null;
         }
+    }
+
+    @Override
+    public Queue getEmptyQueue() {
+        return new ArrayQueue();
     }
 }

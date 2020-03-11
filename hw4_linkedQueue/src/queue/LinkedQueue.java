@@ -1,7 +1,12 @@
 package queue;
 
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 public class LinkedQueue extends AbstractQueue {
     private Node head = null, tail = null;
+    public LinkedQueue() {};
     @Override
     public void enqueue(Object element) {
         size++;
@@ -34,6 +39,12 @@ public class LinkedQueue extends AbstractQueue {
         head = null;
         size = 0;
     }
+
+    @Override
+    public Queue getEmptyQueue() {
+        return new LinkedQueue();
+    }
+
     private class Node {
         private Object value;
         private Node next = null;
