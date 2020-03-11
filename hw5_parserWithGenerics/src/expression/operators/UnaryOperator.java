@@ -1,14 +1,14 @@
 package expression.operators;
 
 import expression.TripleExpression;
-import expression.operations.Operation;
+import expression.calculationType.CalculationType;
 
 public abstract class UnaryOperator<T> implements TripleExpression<T> {
     private TripleExpression<T> expression;
-    protected Operation<T> operation;
-    public UnaryOperator (TripleExpression<T> expression, Operation<T> operation) {
+    protected CalculationType<T> calculationType;
+    public UnaryOperator (TripleExpression<T> expression, CalculationType<T> calculationType) {
         this.expression = expression;
-        this.operation = operation;
+        this.calculationType = calculationType;
     }
     public abstract T makeOperation(T val);
     public abstract String getOperator();

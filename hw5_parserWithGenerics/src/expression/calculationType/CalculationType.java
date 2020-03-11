@@ -1,6 +1,6 @@
-package expression.operations;
+package expression.calculationType;
 
-public interface Operation<T> {
+public interface CalculationType<T> {
     public T parse(String string);
     public T add(T left, T right);
     public T sub(T left, T right);

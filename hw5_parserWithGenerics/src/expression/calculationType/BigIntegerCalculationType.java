@@ -1,10 +1,10 @@
-package expression.operations;
+package expression.calculationType;
 
 import expression.exceptions.DivideByZeroException;
 
 import java.math.BigInteger;
 
-public class BigIntegerOperation implements Operation<BigInteger> {
+public class BigIntegerCalculationType implements CalculationType<BigInteger> {
     @Override
     public BigInteger parse(String string) {
         return new BigInteger(string);

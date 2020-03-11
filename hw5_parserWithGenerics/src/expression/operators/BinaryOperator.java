@@ -1,15 +1,15 @@
 package expression.operators;
 
 import expression.TripleExpression;
-import expression.operations.Operation;
+import expression.calculationType.CalculationType;
 
 public abstract class BinaryOperator<T> implements TripleExpression<T> {
     private TripleExpression<T> left, right;
-    protected Operation<T> operation;
-    public BinaryOperator(TripleExpression<T> left, TripleExpression<T> right, Operation<T> operation) {
+    protected CalculationType<T> calculationType;
+    public BinaryOperator(TripleExpression<T> left, TripleExpression<T> right, CalculationType<T> calculationType) {
         this.left = left;
         this.right = right;
-        this.operation = operation;
+        this.calculationType = calculationType;
     }
     protected abstract T makeOperation(T left, T right);
     protected abstract String getOperator();

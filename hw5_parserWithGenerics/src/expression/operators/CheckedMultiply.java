@@ -1,17 +1,16 @@
 package expression.operators;
 
 import expression.TripleExpression;
-import expression.exceptions.DivOverflowException;
-import expression.operations.Operation;
+import expression.calculationType.CalculationType;
 
 public class CheckedMultiply<T> extends BinaryOperator<T> {
-    public CheckedMultiply (TripleExpression<T> left, TripleExpression<T> right, Operation<T> operation) {
-        super(left, right, operation);
+    public CheckedMultiply (TripleExpression<T> left, TripleExpression<T> right, CalculationType<T> calculationType) {
+        super(left, right, calculationType);
     }
 
     @Override
     protected T makeOperation(T left, T right) {
-        return operation.mul(left, right);
+        return calculationType.mul(left, right);
     }
 
     @Override

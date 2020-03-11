@@ -3,7 +3,7 @@ package expression.parser;
 import expression.TripleExpression;
 import expression.exceptions.*;
 import expression.operators.*;
-import expression.operations.Operation;
+import expression.calculationType.CalculationType;
 
 import java.util.Map;
 import java.util.Set;
@@ -13,9 +13,9 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
     private T constValue;
     private String curString;
     private boolean isNegative = false;
-    Operation<T> operation;
-    public ExpressionParser(Operation<T> operation) {
-        this.operation = operation;
+    CalculationType<T> calculationType;
+    public ExpressionParser(CalculationType<T> calculationType) {
+        this.calculationType = calculationType;
     }
     private static final Set<String> variablesName = Set.of(
             "x", "y", "z"
@@ -61,7 +61,7 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
             nextChar();
         }
         try {
-            constValue = operation.parse(value.toString());
+            constValue = calculationType.parse(value.toString());
         } catch (NumberFormatException e) {
             throw new IllegalConstantException(ParsingException.createErrorMessage(
                     "Illegal constant :" + value.toString(), this));
@@ -159,7 +159,7 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
                     getToken();
                     return res;
                 }
-                res = new CheckedNegate<>(parsePrimeExpression(true, needBracket), operation);
+                res = new CheckedNegate<>(parsePrimeExpression(true, needBracket), calculationType);
                 break;
             case LBRACKET:
                 res = parseExpression(highestPriority, true, true);
@@ -211,13 +211,13 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
     private TripleExpression<T> makeExpression(TripleExpression<T> left, TripleExpression<T> right, Token operator) throws ParsingException {
         switch (operator) {
             case ADD:
-                return new CheckedAdd<T>(left, right, operation);
+                return new CheckedAdd<T>(left, right, calculationType);
             case SUB:
-                return new CheckedSubtract<T>(left, right, operation);
+                return new CheckedSubtract<T>(left, right, calculationType);
             case MUL:
-                return new CheckedMultiply<T>(left, right, operation);
+                return new CheckedMultiply<T>(left, right, calculationType);
             case DIV:
-                return new CheckedDivide<T>(left, right, operation);
+                return new CheckedDivide<T>(left, right, calculationType);
 
         }
         throw new UndefinedOperatorException(ParsingException.createErrorMessage(

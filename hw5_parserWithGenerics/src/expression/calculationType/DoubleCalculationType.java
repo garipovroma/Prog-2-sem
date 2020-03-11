@@ -1,6 +1,6 @@
-package expression.operations;
+package expression.calculationType;
 
-public class DoubleOperation implements Operation<Double> {
+public class DoubleCalculationType implements CalculationType<Double> {
     @Override
     public Double parse(String string) {
         return Double.parseDouble(string);

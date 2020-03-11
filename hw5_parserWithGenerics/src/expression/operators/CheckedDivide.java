@@ -1,18 +1,16 @@
 package expression.operators;
 
 import expression.TripleExpression;
-import expression.exceptions.DivOverflowException;
-import expression.exceptions.DivideByZeroException;
-import expression.operations.Operation;
+import expression.calculationType.CalculationType;
 
 public class CheckedDivide<T> extends BinaryOperator<T> {
-    public CheckedDivide (TripleExpression<T> left, TripleExpression<T> right, Operation<T> operation) {
-        super(left, right, operation);
+    public CheckedDivide (TripleExpression<T> left, TripleExpression<T> right, CalculationType<T> calculationType) {
+        super(left, right, calculationType);
     }
 
     @Override
     protected T makeOperation(T left, T right) {
-        return operation.div(left, right);
+        return calculationType.div(left, right);
     }
 
     @Override

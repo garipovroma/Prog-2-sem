@@ -1,8 +1,8 @@
-package expression.operations;
+package expression.calculationType;
 
 import expression.exceptions.*;
 
-public class IntegerOperation implements Operation<Integer> {
+public class IntegerCalculationType implements CalculationType<Integer> {
 
     @Override
     public Integer parse(String string) {
