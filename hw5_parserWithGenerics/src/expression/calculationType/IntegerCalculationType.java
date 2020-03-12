@@ -46,6 +46,23 @@ public class IntegerCalculationType implements CalculationType<Integer> {
 
     @Override
     public Integer negative(Integer left) {
+        if (left == Integer.MIN_VALUE) {
+            throw new NegateOverflowException("-" + left + " -  overflows");
+        }
         return -left;
+    }
+    @Override
+    public Integer count(Integer left) {
+        return Integer.bitCount(left);
+    }
+
+    @Override
+    public Integer min(Integer left, Integer right) {
+        return Integer.min(left, right);
+    }
+
+    @Override
+    public Integer max(Integer left, Integer right) {
+        return Integer.max(left, right);
     }
 }

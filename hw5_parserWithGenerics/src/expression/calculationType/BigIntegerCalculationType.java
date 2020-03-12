@@ -37,4 +37,19 @@ public class BigIntegerCalculationType implements CalculationType<BigInteger> {
     public BigInteger negative(BigInteger left) {
         return left.negate();
     }
+
+    @Override
+    public BigInteger count(BigInteger left) {
+        return new BigInteger(Integer.toString(left.bitCount()));
+    }
+
+    @Override
+    public BigInteger min(BigInteger left, BigInteger right) {
+        return left.min(right);
+    }
+
+    @Override
+    public BigInteger max(BigInteger left, BigInteger right) {
+        return left.max(right);
+    }
 }

@@ -30,4 +30,19 @@ public class DoubleCalculationType implements CalculationType<Double> {
     public Double negative(Double left) {
         return -left;
     }
+
+    @Override
+    public Double count(Double left) {
+        return (double) Long.bitCount(Double.doubleToLongBits(left));
+    }
+
+    @Override
+    public Double min(Double left, Double right) {
+        return Double.min(left, right);
+    }
+
+    @Override
+    public Double max(Double left, Double right) {
+        return Double.max(left, right);
+    }
 }

@@ -20,10 +20,13 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
     private static final Set<String> variablesName = Set.of(
             "x", "y", "z"
     );
-    private static final int highestPriority = 2;
+    private static final int highestPriority = 3;
     private static final Map<String, Token> operatorsWithStrName = Map.of(
             "log2", Token.LOG2,
-            "pow2", Token.POW2
+            "pow2", Token.POW2,
+            "min", Token.MIN,
+            "max", Token.MAX,
+            "count", Token.COUNT
     );
     private static final Map<Token, Integer> priority = Map.of(
             Token.MUL, 1,
@@ -31,15 +34,18 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
             Token.ADD, 2,
             Token.SUB, 2,
             Token.POW, 0,
-            Token.LOG, 0
+            Token.LOG, 0,
+            Token.MIN, 3,
+            Token.MAX, 3
     );
     private static final Map<Integer, Set<Token>> getOperationsByPriority = Map.of(
             1, Set.of(Token.MUL, Token.DIV),
             2, Set.of(Token.ADD, Token.SUB),
-            0, Set.of(Token.POW, Token.LOG)
+            0, Set.of(Token.POW, Token.LOG),
+            3, Set.of(Token.MIN, Token.MAX)
     );
     private static final Set<Token> operators = Set.of(
-            Token.ADD, Token.SUB, Token.DIV, Token.MUL, Token.POW, Token.LOG
+            Token.ADD, Token.SUB, Token.DIV, Token.MUL, Token.POW, Token.LOG, Token.MIN, Token.MAX
     );
     private static final Map<Token, String> getOperator = Map.of(
             Token.ADD, "+",
@@ -47,7 +53,9 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
             Token.MUL, "*",
             Token.DIV, "/",
             Token.POW, "**",
-            Token.LOG, "//"
+            Token.LOG, "//",
+            Token.MIN, "min",
+            Token.MAX, "max"
     );
     private final int lowestPriority = -1;
     private Token getConst() throws ParsingException {
@@ -94,6 +102,12 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
                     return curToken = Token.LOG;
                 }
                 return curToken = Token.DIV;
+            case 'm':
+                if (check("min")) {
+                    return curToken = Token.MIN;
+                } else if (check("ax")) {
+                    return curToken = Token.MAX;
+                }
             case '+':
                 nextChar();
                 return curToken = Token.ADD;
@@ -159,8 +173,16 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
                     getToken();
                     return res;
                 }
-                res = new CheckedNegate<>(parsePrimeExpression(true, needBracket), calculationType);
+                res = new CheckedNegate<T>(parsePrimeExpression(true, needBracket), calculationType);
                 break;
+            case COUNT:
+                if (between('0', '9')) {
+                    getToken();
+                    res = new Count(new Const(constValue), calculationType);
+                    getToken();
+                    return res;
+                }
+                return new Count(parsePrimeExpression(true, needBracket), calculationType);
             case LBRACKET:
                 res = parseExpression(highestPriority, true, true);
                 if (curToken != Token.RBRACKET) {
@@ -218,7 +240,10 @@ public class ExpressionParser<T extends Number> extends BaseParser implements Pa
                 return new CheckedMultiply<T>(left, right, calculationType);
             case DIV:
                 return new CheckedDivide<T>(left, right, calculationType);
-
+            case MIN:
+                return new Min<T>(left, right, calculationType);
+            case MAX:
+                return new Max<T>(left, right, calculationType);
         }
         throw new UndefinedOperatorException(ParsingException.createErrorMessage(
                 operator + "- undefined operator", this));
