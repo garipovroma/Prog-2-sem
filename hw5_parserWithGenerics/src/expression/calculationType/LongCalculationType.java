@@ -2,80 +2,81 @@ package expression.calculationType;
 
 import expression.exceptions.*;
 
-public class IntegerCalculationType implements CalculationType<Integer> {
+public class LongCalculationType implements CalculationType<Long> {
     private boolean checkOverflow = false;
-    public IntegerCalculationType(boolean flag) {
+    public LongCalculationType(boolean flag) {
         this.checkOverflow = flag;
     }
     @Override
-    public Integer parse(String string) {
-        return Integer.parseInt(string);
+    public Long parse(String string) {
+        return Long.parseLong(string);
     }
 
     @Override
-    public Integer add(Integer left, Integer right) {
+    public Long add(Long left, Long right) {
         if (checkOverflow) {
-            if (((right > 0 && Integer.MAX_VALUE - right < left) || (right < 0 && Integer.MIN_VALUE - right > left))) {
+            if (((right > 0 && Long.MAX_VALUE - right < left) || (right < 0 && Long.MIN_VALUE - right > left))) {
                 throw new AddOverflowException(left + " + " + right + " - overflows");
             }
         }
-        return left + right;
+        return (long)((long)left + right);
     }
 
     @Override
-    public Integer sub(Integer left, Integer right) {
+    public Long sub(Long left, Long right) {
         if (checkOverflow) {
-            if ((right < 0 && Integer.MAX_VALUE + right < left) || (right > 0 && Integer.MIN_VALUE + right > left)) {
+            if ((right < 0 && Long.MAX_VALUE + right < left) || (right > 0 && Long.MIN_VALUE + right > left)) {
                 throw new SubOverflowException(left + " - " + right + " - overflows");
             }
         }
-        return left - right;
+        return (long)((long)left - right);
     }
 
     @Override
-    public Integer mul(Integer left, Integer right) {
+    public Long mul(Long left, Long right) {
         if (checkOverflow) {
             if (left != 0 && right != 0 && ((left * right) / right != left || (left * right) / left != right)) {
                 throw new MulOverflowException(left + " * " + right + " - overflows");
             }
         }
-        return left * right;
+        return (long)((long)left * right);
     }
 
     @Override
-    public Integer div(Integer left, Integer right) {
+    public Long div(Long left, Long right) {
         if (checkOverflow) {
-            if (left == Integer.MIN_VALUE && right == -1) {
+            if (left == Long.MIN_VALUE && right == -1) {
                 throw new DivOverflowException(left + " / " + right + " - overflows");
             }
         }
         if (right == 0) {
             throw new DivideByZeroException(left + " / " + right + " - division by zero");
         }
-        return left / right;
+        return (long)((long)left / right);
     }
 
     @Override
-    public Integer negative(Integer left) {
+    public Long negative(Long left) {
         if (checkOverflow) {
-            if (left == Integer.MIN_VALUE) {
+            if (left == Long.MIN_VALUE) {
                 throw new NegateOverflowException("-" + left + " -  overflows");
             }
         }
         return -left;
     }
+
     @Override
-    public Integer count(Integer left) {
-        return Integer.bitCount(left);
+    public Long count(Long left) {
+        return (long)Long.bitCount(left);
     }
 
     @Override
-    public Integer min(Integer left, Integer right) {
-        return Integer.min(left, right);
+    public Long min(Long left, Long right) {
+        return Long.min(left,right);
     }
 
     @Override
-    public Integer max(Integer left, Integer right) {
-        return Integer.max(left, right);
+    public Long max(Long left, Long right) {
+        return Long.max(left, right);
     }
 }

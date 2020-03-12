@@ -1,6 +1,10 @@
 package expression.calculationType;
 
 public class DoubleCalculationType implements CalculationType<Double> {
+    private boolean checkOverflow = false;
+    public DoubleCalculationType(boolean flag) {
+        this.checkOverflow = flag;
+    }
     @Override
     public Double parse(String string) {
         return Double.parseDouble(string);

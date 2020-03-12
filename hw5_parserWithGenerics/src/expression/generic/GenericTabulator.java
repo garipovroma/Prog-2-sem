@@ -1,20 +1,20 @@
 package expression.generic;
 
 import expression.TripleExpression;
+import expression.calculationType.*;
 import expression.exceptions.EvaluatingException;
-import expression.calculationType.BigIntegerCalculationType;
-import expression.calculationType.DoubleCalculationType;
-import expression.calculationType.IntegerCalculationType;
-import expression.calculationType.CalculationType;
 import expression.parser.ExpressionParser;
 
 import java.util.Map;
 
 public class GenericTabulator implements Tabulator {
     private final Map<String, CalculationType<? extends Number>> operationByMode = Map.of(
-            "i", new IntegerCalculationType(),
-            "d", new DoubleCalculationType(),
-            "bi", new BigIntegerCalculationType()
+            "i", new IntegerCalculationType(true),
+            "d", new DoubleCalculationType(true),
+            "bi", new BigIntegerCalculationType(true),
+            "u", new IntegerCalculationType(false),
+            "l", new LongCalculationType(false),
+            "s", new ShortCalculationType(false)
             );
 
     @Override

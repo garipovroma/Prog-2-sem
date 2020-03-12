@@ -5,6 +5,10 @@ import expression.exceptions.DivideByZeroException;
 import java.math.BigInteger;
 
 public class BigIntegerCalculationType implements CalculationType<BigInteger> {
+    private boolean checkOverflow = false;
+    public BigIntegerCalculationType(boolean flag) {
+        this.checkOverflow = flag;
+    }
     @Override
     public BigInteger parse(String string) {
         return new BigInteger(string);
@@ -27,8 +31,10 @@ public class BigIntegerCalculationType implements CalculationType<BigInteger> {
 
     @Override
     public BigInteger div(BigInteger left, BigInteger right) {
-        if (right.equals(BigInteger.ZERO)) {
-            throw new DivideByZeroException(left + " / " + right + " - division by zero");
+        if (checkOverflow) {
+            if (right.equals(BigInteger.ZERO)) {
+                throw new DivideByZeroException(left + " / " + right + " - division by zero");
+            }
         }
         return left.divide(right);
     }
