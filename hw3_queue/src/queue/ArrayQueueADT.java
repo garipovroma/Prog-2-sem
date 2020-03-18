@@ -10,6 +10,7 @@ public class ArrayQueueADT {
     // for all i in 0 .. size - 1 : q[i] != null
     private Object[] elements = new Object[5];
     private int l = 0, size = 0;
+    // pred : queue != null
     private static void ensureCapacity(ArrayQueueADT queue, int capacity) {
         if (capacity > queue.elements.length) {
             Object[] newElements = new Object[2 * capacity];
