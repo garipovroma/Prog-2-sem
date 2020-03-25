@@ -23,8 +23,8 @@ let e = operation(cnst(Math.exp(1)));
 let median = (...args) => args.sort((a, b) => a - b)[Math.floor(args.length / 2)];
 let sum = (...args) => args.reduce((a, b) => a + b);
 let avg = (...args) => sum(...args) / (args.length);
-let avg5 = (a, b, c, d, e) => operation(avg, a, b, c, d, e);
-let med3 = (a, b, c) => operation(median, a, b, c);
+let avg5 = (...args) => operation(avg, ...args);
+let med3 = (...args) => operation(median, ...args);
 
 // -------------parser functions and constants-------------------
 
@@ -125,7 +125,3 @@ let parse = function(s) {
     }
     return stack.pop();
 };
-
-let val = parse('x y z med3');
-console.log(val(0, 0, 0));
-
