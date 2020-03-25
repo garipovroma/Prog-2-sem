@@ -12,21 +12,48 @@ let variable = (name) => (...args) => {
     }
 };
 
-let binaryOperation = (f, a, b) => (...args) => f(a(args[0], args[1], args[2]), b(args[0], args[1], args[2]));
-let unaryOperation = (f, a) => (...args) => f(a(args[0], args[1], args[2]));
-let constValueOperation = (value) => (cnst(value));
+let apply = function(exprs, ...args) {
+    let res = [];
+    for (let i of exprs) {
+        res.push(i(...args));
+    }
+    return res;
+};
 
-let add = (x, y) => binaryOperation((a, b) => a + b, x, y);
-let subtract = (x, y) => binaryOperation((a, b) => a - b, x, y);
-let multiply = (x, y) => binaryOperation((a, b) => a * b, x, y);
-let divide = (x, y) => binaryOperation((a, b) => a / b, x, y);
+let operation = (f, ...args1) => (...args2) => f(...apply(args1, ...args2));
 
-let negate = (x) => unaryOperation((a) => -a, x);
-let sin = (x) => unaryOperation((a) => Math.sin(a), x);
-let cos = (x) => unaryOperation((a) => Math.cos(a), x);
+let add = (x, y) => operation((a, b) => a + b, x, y);
+let subtract = (x, y) => operation((a, b) => a - b, x, y);
+let multiply = (x, y) => operation((a, b) => a * b, x, y);
+let divide = (x, y) => operation((a, b) => a / b, x, y);
+let negate = (x) => operation((a) => -a, x);
+let pi = operation(cnst(Math.acos(-1)));
+let e = operation(cnst(Math.exp(1)));
 
-let pi = constValueOperation(Math.acos(-1));
-let e = constValueOperation(Math.exp(1));
+
+function foldLeft(f, zero) {
+    return (...args) => {
+        let result = zero;
+        for (const arg of args) {
+            result = f(result, arg);
+        }
+        return result;
+    }
+}
+
+let median = (...args) => {
+    args.sort((a, b) => a - b);
+    let pos = Math.floor(args.length / 2);
+    return args[pos];
+}
+
+let sum = foldLeft((a, b) => a + b, 0);
+let avg = (...args) => sum(...args) / (args.length);
+
+let avg5 = (a, b, c, d, e) => operation(avg, a, b, c, d, e);
+let med3 = (a, b, c) => operation(median, a, b, c);
+
+// -------------parser functions and constants-------------------
 
 let skip = function (f) {
     return (...args) => {
@@ -40,9 +67,47 @@ let skip = function (f) {
 };
 
 let variableNames = ['x', 'y', 'z'];
-let binaryOperations = ['+', '-', '*', '/'];
-let unaryOperationsPrefixes = ['s', 'c', 'n'];
 let constantsPrefixes = ['p', 'e'];
+let operationsPrefixes = ['+', '-', '*', '/', 'a', 'm'];
+let operations = ['+', '-', '*', '/', 'avg5', 'med3'];
+let unaryOperations = ['negate'];
+let unaryOperationsPrefixes = ['n'];
+let operationByPrefix = {
+    '+' : '+', '-' : '-', '*' : '*', '/' : '/', 'a' : 'avg5', 'm' : 'med3'
+};
+let operandsNumber = {
+    '+' : 2, '-' : 2, '*' : 2, '/' : 2, 'avg5' : 5, 'med3' : 3,
+};
+let pushOperation = function(stack, curOp) {
+    let curOperandsNumber = operandsNumber[curOp];
+    let mas = [];
+    for (let i = 0; i < curOperandsNumber; i++) {
+        mas.push(stack.pop());
+    }
+    mas.reverse();
+    let oper;
+    switch (curOp) {
+        case '+':
+            oper = add;
+            break;
+        case '-':
+            oper = subtract;
+            break;
+        case '*':
+            oper = multiply;
+            break;
+        case '/':
+            oper = divide;
+            break;
+        case 'avg5':
+            oper = avg5;
+            break;
+        case 'med3':
+            oper = med3;
+            break;
+    }
+    stack.push(oper(...mas));
+};
 
 let isDigit = c => {return ('0' <= c && c <= '9')};  // use it only with 1-characters-strings
 let skipWhiteSpaces = skip(c => {return (c === ' ')} );
@@ -56,6 +121,8 @@ let check = function(s, t, ind) {
     }
     return true;
 };
+
+// -------------parser functions and constants-------------------
 
 let parse = function(s) {
     s = s.trim();
@@ -78,20 +145,15 @@ let parse = function(s) {
             i--;
         } else if (variableNames.includes(s.charAt(i))) {
             stack.push(variable(s.charAt(i)));
+        } else if (operationsPrefixes.includes(s.charAt(i))) {
+            if (check(s, operationByPrefix[s.charAt(i)]), i) {
+                let curOp = operationByPrefix[s.charAt(i)];
+                pushOperation(stack, curOp);
+                let str = operationByPrefix[s.charAt(i)];
+                i += str.length - 1;
+            }  //  -- else error
         } else if (unaryOperationsPrefixes.includes(s.charAt(i))) {
             switch (s.charAt(i)) {
-                case 's':
-                    if (check(s, "sin", i)) {
-                        stack.push(sin(stack.pop()));
-                        i += 2;
-                    }
-                    continue;
-                case 'c':
-                    if (check(s, "cos", i)) {
-                        stack.push(cos(stack.pop()));
-                        i += 2;
-                    }
-                    continue;
                 case 'n':
                     if (check(s, "negate", i)) {
                         stack.push(negate(stack.pop()));
@@ -110,19 +172,11 @@ let parse = function(s) {
                 case 'e':
                     stack.push(e);
             }
-        } else if (binaryOperations.includes(s.charAt(i))) {
-            let b = stack.pop();
-            let a = stack.pop();
-            if (s.charAt(i) === '+') {
-                stack.push(add(a, b));
-            } else if (s.charAt(i) === '-') {
-                stack.push(subtract(a, b));
-            } else if (s.charAt(i) === '*') {
-                stack.push(multiply(a, b));
-            } else if (s.charAt(i) === '/') {
-                stack.push(divide(a, b));
-            }
         }
     }
     return stack.pop();
 };
+
+let val = parse('x negate 2 /');
+console.log(val(0, 0, 0));
+
