@@ -12,16 +12,7 @@ let variable = (name) => (...args) => {
     }
 };
 
-let apply = function(exprs, ...args) {
-    let res = [];
-    for (let i of exprs) {
-        res.push(i(...args));
-    }
-    return res;
-};
-
-let operation = (f, ...args1) => (...args2) => f(...apply(args1, ...args2));
-
+let operation = (f, ...args1) => (...args2) => f(...args1.map(value => value(...args2)));
 let add = (x, y) => operation((a, b) => a + b, x, y);
 let subtract = (x, y) => operation((a, b) => a - b, x, y);
 let multiply = (x, y) => operation((a, b) => a * b, x, y);
@@ -29,27 +20,9 @@ let divide = (x, y) => operation((a, b) => a / b, x, y);
 let negate = (x) => operation((a) => -a, x);
 let pi = operation(cnst(Math.acos(-1)));
 let e = operation(cnst(Math.exp(1)));
-
-
-function foldLeft(f, zero) {
-    return (...args) => {
-        let result = zero;
-        for (const arg of args) {
-            result = f(result, arg);
-        }
-        return result;
-    }
-}
-
-let median = (...args) => {
-    args.sort((a, b) => a - b);
-    let pos = Math.floor(args.length / 2);
-    return args[pos];
-}
-
-let sum = foldLeft((a, b) => a + b, 0);
+let median = (...args) => args.sort((a, b) => a - b)[Math.floor(args.length / 2)];
+let sum = (...args) => args.reduce((a, b) => a + b);
 let avg = (...args) => sum(...args) / (args.length);
-
 let avg5 = (a, b, c, d, e) => operation(avg, a, b, c, d, e);
 let med3 = (a, b, c) => operation(median, a, b, c);
 
@@ -78,35 +51,11 @@ let operationByPrefix = {
 let operandsNumber = {
     '+' : 2, '-' : 2, '*' : 2, '/' : 2, 'avg5' : 5, 'med3' : 3,
 };
+let operationByString = {
+    '+' : add, '-' : subtract, '*' : multiply, '/' : divide, 'avg5' : avg5, 'med3' : med3
+};
 let pushOperation = function(stack, curOp) {
-    let curOperandsNumber = operandsNumber[curOp];
-    let mas = [];
-    for (let i = 0; i < curOperandsNumber; i++) {
-        mas.push(stack.pop());
-    }
-    mas.reverse();
-    let oper;
-    switch (curOp) {
-        case '+':
-            oper = add;
-            break;
-        case '-':
-            oper = subtract;
-            break;
-        case '*':
-            oper = multiply;
-            break;
-        case '/':
-            oper = divide;
-            break;
-        case 'avg5':
-            oper = avg5;
-            break;
-        case 'med3':
-            oper = med3;
-            break;
-    }
-    stack.push(oper(...mas));
+    stack.push(operationByString[curOp](...stack.splice(-operandsNumber[curOp])));
 };
 
 let isDigit = c => {return ('0' <= c && c <= '9')};  // use it only with 1-characters-strings
@@ -177,6 +126,6 @@ let parse = function(s) {
     return stack.pop();
 };
 
-let val = parse('x negate 2 /');
+let val = parse('x y z med3');
 console.log(val(0, 0, 0));
 
