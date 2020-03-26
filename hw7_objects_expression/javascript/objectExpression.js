@@ -1,65 +1,77 @@
 "use strict"
 
-function Expression (evalFunction, toStringFunction, diffFunction) {
-    this.evaluate = evalFunction;
-    this.toString = toStringFunction;
-    this.diff = diffFunction;
-}
-
-function BinaryOperator (left, right, operatorString, evalFunction, diffFunction) {
-    this.left = left;
-    this.right = right;
-    this.operatorString = operatorString;
-    Expression.call(this, (...args) => evalFunction(
-        this.left.evaluate(...args),
-        this.right.evaluate(...args)),
-        () => (this.left.toString() + " " + this.right.toString() + " " + this.operatorString),
-        diffFunction(this.left, this.right));
-}
-BinaryOperator.prototype = Object.create(Expression.prototype);
-
-let Add = function(left, right) { BinaryOperator.call(this, left, right, '+', (a, b) => a + b,
-    (c, d) => (variable) => new Add(c.diff(variable), d.diff(variable))); };
-let Subtract = function(left, right) { BinaryOperator.call(this, left, right, '-', (a, b) => a - b,
-    (c, d) => (variable) => new Subtract(c.diff(variable), d.diff(variable))); };
-let Multiply = function(left, right) { BinaryOperator.call(this, left, right, '*', (a, b) => a * b,
-    (c, d) => (variable) => new Add(new Multiply(c.diff(variable), d), new Multiply(c, d.diff(variable)))); };
-let Divide = function(left, right) { BinaryOperator.call(this, left, right, '/', (a, b) => a / b,
-    (c, d) => (variable) => new Divide(
-        new Subtract(new Multiply(c.diff(variable), d), new Multiply(c, d.diff(variable))), new Multiply(d, d))); };
-
-function UnaryOperator (operand, operatorString, evalFunction, diffFunction) {
-    this.operand = operand;
-    this.operatorString = operatorString;
-    Expression.call(this, (...args) => evalFunction(this.operand.evaluate(...args)),
-        () => this.operand.toString() + " " + this.operatorString, diffFunction(this.operand));
-}
-UnaryOperator.prototype = Object.create(Expression.prototype);
-
-let Negate = function(operand) { UnaryOperator.call(this, operand, 'negate',  (x) => -x,
-    (c) => (variable) => (new Negate(c.diff(variable)))); };
-
-let Const = function(x) {
-    this.value = x;
-    Expression.call(this, () => this.value, () => this.value.toString(), () => new Const(0));
+let Operator = function(...args) {
+    this.args = args;
 };
-Const.prototype = Object.create(Expression.prototype);
+Operator.prototype.evaluate = function(...args) { return this.operation(
+    ...this.args.map((i) => (i.evaluate(...args)))) };
+Operator.prototype.toString = function() { return ''.concat(
+    ...this.args.map((i) => i.toString() + ' '), this.operationString) };
+Operator.prototype.diff = function(variable) { return this.doDiff(...this.args, variable) };
+
+function Add(left, right) {
+    Operator.call(this, left, right);
+}
+Add.prototype = Object.create(Operator.prototype);
+Add.prototype.operation = (a, b) => (a + b);
+Add.prototype.operationString = '+';
+Add.prototype.doDiff = (a, b, variable) => new Add(a.diff(variable), b.diff(variable));
+
+function Subtract(left, right) {
+    Operator.call(this, left, right);
+}
+Subtract.prototype = Object.create(Operator.prototype);
+Subtract.prototype.operation = (a, b) => (a - b);
+Subtract.prototype.operationString = '-';
+Subtract.prototype.doDiff = (a, b, variable) => new Subtract(a.diff(variable), b.diff(variable));
+
+function Multiply(left, right) {
+    Operator.call(this, left, right);
+}
+Multiply.prototype = Object.create(Operator.prototype);
+Multiply.prototype.operation = (a, b) => a * b;
+Multiply.prototype.operationString = '*';
+Multiply.prototype.doDiff = (a, b, variable) => new Add(
+    new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable)));
+function Divide(left, right) {
+    Operator.call(this, left, right);
+}
+Divide.prototype = Object.create(Operator.prototype);
+Divide.prototype.operation = (a, b) => a / b;
+Divide.prototype.operationString = '/';
+Divide.prototype.doDiff = (a, b, variable) => new Divide(
+    new Subtract(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))), new Multiply(b, b));
+
+function Negate(operand) {
+    Operator.call(this, operand);
+}
+Negate.prototype = Object.create(Operator.prototype);
+Negate.prototype.operation = (x) => -x;
+Negate.prototype.operationString = 'negate';
+Negate.prototype.doDiff = (a, variable) => new Negate(a.diff(variable));
+
+function Const(x) {
+    this.value = x;
+}
+Const.prototype.evaluate = function() { return this.value };
+Const.prototype.toString = function() { return this.value.toString() };
+Const.prototype.diff = function() { return new Const(0) };
 
 let variableInd = {
     'x': 0, 'y': 1, 'z': 2
 };
 
-let Variable = function(name) {
+function Variable(name) {
     this.name = name;
-    Expression.call(this, (...args) => (args[variableInd[this.name]]), () => this.name,
-        (variable) => (name === variable ? new Const(1) : new Const(0)));
 };
-Variable.prototype = Object.create(Expression.prototype);
+Variable.prototype.evaluate = function(...args) { return args[variableInd[this.name]] };
+Variable.prototype.toString = function() { return this.name };
+Variable.prototype.diff = function(variable) { return (this.name === variable ? new Const(1) : new Const(0)) };
 
 let x = new Variable("x");
 console.log(x.evaluate(10));
 
-let a = new Add(new Const(1), new Variable("x"));
+let a = new Add(new Const(2), new Variable("x")).diff();
 console.log(a.evaluate(10, 0, 0));
 console.log(a.toString());
 
