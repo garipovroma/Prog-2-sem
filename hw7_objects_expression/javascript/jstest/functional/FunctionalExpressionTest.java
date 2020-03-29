@@ -27,7 +27,7 @@ public class FunctionalExpressionTest extends BaseJavascriptTest<Engine> {
     );
 
     protected FunctionalExpressionTest(final Language language, final boolean testParsing) {
-        this(new JSEngine("objectExpression.js", ""), language, testParsing);
+        this(new JSEngine("functionalExpression.js", ""), language, testParsing);
     }
 
     protected FunctionalExpressionTest(final Engine engine, final Language language, final boolean testParsing) {

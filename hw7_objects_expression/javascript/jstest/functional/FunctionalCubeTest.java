@@ -9,7 +9,7 @@ import jstest.Language;
 public class FunctionalCubeTest extends FunctionalExpressionTest {
     public static class CubeTests extends ArithmeticTests {{
         unary("cube", x -> x * x * x);
-        unary("cuberoot", x -> Math.cbrt(x));
+        unary("cuberoot", Math::cbrt);
         tests(
                 f("+", f("cube", vx), vy),
                 f("cuberoot", f("+", vx, vy))

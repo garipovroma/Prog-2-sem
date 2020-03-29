@@ -1,8 +1,8 @@
 "use strict"
 
-let Operator = function(...args) {
+function Operator (...args) {
     this.args = args;
-};
+}
 Operator.prototype.evaluate = function(...args) { return this.operation(
     ...this.args.map((i) => (i.evaluate(...args)))) };
 Operator.prototype.toString = function() { return ''.concat(
@@ -33,6 +33,7 @@ Multiply.prototype.operation = (a, b) => a * b;
 Multiply.prototype.operationString = '*';
 Multiply.prototype.doDiff = (a, b, variable) => new Add(
     new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable)));
+
 function Divide(left, right) {
     Operator.call(this, left, right);
 }
@@ -63,103 +64,66 @@ let variableInd = {
 
 function Variable(name) {
     this.name = name;
-};
-Variable.prototype.evaluate = function(...args) { return args[variableInd[this.name]] };
+    this.ind = variableInd[name];
+}
+
+Variable.prototype.evaluate = function(...args) { return args[this.ind] };
 Variable.prototype.toString = function() { return this.name };
 Variable.prototype.diff = function(variable) { return (this.name === variable ? new Const(1) : new Const(0)) };
 
-let x = new Variable("x");
-console.log(x.evaluate(10));
+function Log(left, right) {
+    Operator.call(this, left, right);
+}
+Log.prototype = Object.create(Operator.prototype);
+Log.prototype.operation = (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a));
+Log.prototype.operationString = 'log';
+Log.prototype.doDiff = (a, b, variable) => new Divide(new Subtract(new Divide(
+    new Multiply(new Log(new Const(Math.E), a), b.diff(variable)), b),
+    new Divide(new Multiply(new Log(new Const(Math.E), b), a.diff(variable)), a)
+), new Multiply(new Log(new Const(Math.E), a), new Log(new Const(Math.E), a)));
 
-let a = new Add(new Const(2), new Variable("x")).diff();
-console.log(a.evaluate(10, 0, 0));
-console.log(a.toString());
 
+function Power(left, right) {
+    Operator.call(this, left, right);
+}
+Power.prototype = Object.create(Operator.prototype);
+Power.prototype.operation = (a, b) => Math.pow(a, b);
+Power.prototype.operationString = 'pow';
+Power.prototype.doDiff = (a, b, variable) => new Multiply(new Power(a, new Subtract(b, new Const(1))), new Add(
+    new Multiply(b, a.diff(variable)), new Multiply(new Multiply(a, new Log(new Const(Math.E), a)), b.diff(variable)))
+);
 
-// -------------parser functions and constants-------------------
-
-let skip = function (f) {
-    return (...args) => {
-        let s = args[0];
-        let i = args[1];
-        while (i < s.length && f(s.charAt(i))) {
-            i++;
-        }
-        return i;
-    }
+const operandsNumber = {
+    '+' : 2,
+    '-' : 2,
+    '*' : 2,
+    '/' : 2,
+    'log' : 2,
+    'pow' : 2,
+    'negate': 1
+};
+const operationByString = {
+    '+' : Add,
+    '-' : Subtract,
+    '*' : Multiply,
+    '/' : Divide,
+    'pow' : Power,
+    'log' : Log,
+    'negate' : Negate
 };
 
-let variableNames = ['x', 'y', 'z'];
-let operationsPrefixes = ['+', '-', '*', '/'];
-let operations = ['+', '-', '*', '/'];
-let unaryOperations = ['negate'];
-let unaryOperationsPrefixes = ['n'];
-let operationByPrefix = {
-    '+' : '+', '-' : '-', '*' : '*', '/' : '/'
-};
-let operandsNumber = {
-    '+' : 2, '-' : 2, '*' : 2, '/' : 2
-};
-let operationByString = {
-    '+' : Add, '-' : Subtract, '*' : Multiply, '/' : Divide
-};
-let pushOperation = function(stack, curOp) {
-    stack.push(new operationByString[curOp](...stack.splice(-operandsNumber[curOp])));
-};
-
-let isDigit = c => {return ('0' <= c && c <= '9')};  // use it only with 1-characters-strings
-let skipWhiteSpaces = skip(c => {return (c === ' ')} );
-let skipConst = skip(isDigit);
-
-let check = function(s, t, ind) {
-    for (let i = 0; i < t.length; i++) {
-        if (s.charAt(i + ind) !== t.charAt(i)) {
-            return false;
-        }
-    }
-    return true;
-};
-
-// -------------parser functions and constants-------------------
-
-let parse = function(s) {
-    s = s.trim();
+function parse(expression) {
     let stack = [];
-    for (let i = 0; i < s.length; i++) {
-        i = skipWhiteSpaces(s, i);
-        let negative = false;
-        if (s.charAt(i) === '-' && isDigit(s.charAt(i + 1))) {
-            negative = true;
-            i++;
+    const parseSubstring = s => {
+        if (s in variableInd) {
+            stack.push(new Variable(s));
+        } else if (s in operationByString) {
+            stack.push(new operationByString[s](...stack.splice(-operandsNumber[s])));
+        } else {
+            stack.push(new Const(+s));
         }
-        if (isDigit(s.charAt(i))) {
-            let j = skipConst(s, i);
-            let val = +s.substr(i, j - i);
-            if (negative) {
-                val *= -1;
-            }
-            stack.push(new Const(val));
-            i = j;
-            i--;
-        } else if (variableNames.includes(s.charAt(i))) {
-            stack.push(new Variable(s.charAt(i)));
-        } else if (operationsPrefixes.includes(s.charAt(i))) {
-            if (check(s, operationByPrefix[s.charAt(i)], i)) {
-                let curOp = operationByPrefix[s.charAt(i)];
-                pushOperation(stack, curOp);
-                let str = operationByPrefix[s.charAt(i)];
-                i += str.length - 1;
-            }  //  -- else error
-        } else if (unaryOperationsPrefixes.includes(s.charAt(i))) {
-            switch (s.charAt(i)) {
-                case 'n':
-                    if (check(s, "negate", i)) {
-                        stack.push(new Negate(stack.pop()));
-                        i += 5;
-                    }
-                // otherwise -- error
-            }
-        }
-    }
+    };
+    expression.trim().split(/\s+/).forEach(parseSubstring);
     return stack.pop();
-};
+}
+
