@@ -71,6 +71,8 @@ Variable.prototype.evaluate = function(...args) { return args[this.ind] };
 Variable.prototype.toString = function() { return this.name };
 Variable.prototype.diff = function(variable) { return (this.name === variable ? new Const(1) : new Const(0)) };
 
+const E = new Const(Math.E);
+
 function Log(left, right) {
     Operator.call(this, left, right);
 }
@@ -78,10 +80,9 @@ Log.prototype = Object.create(Operator.prototype);
 Log.prototype.operation = (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a));
 Log.prototype.operationString = 'log';
 Log.prototype.doDiff = (a, b, variable) => new Divide(new Subtract(new Divide(
-    new Multiply(new Log(new Const(Math.E), a), b.diff(variable)), b),
-    new Divide(new Multiply(new Log(new Const(Math.E), b), a.diff(variable)), a)
-), new Multiply(new Log(new Const(Math.E), a), new Log(new Const(Math.E), a)));
-
+    new Multiply(new Log(E, a), b.diff(variable)), b),
+    new Divide(new Multiply(new Log(E, b), a.diff(variable)), a)
+), new Multiply(new Log(E, a), new Log(E, a)));
 
 function Power(left, right) {
     Operator.call(this, left, right);
@@ -90,7 +91,7 @@ Power.prototype = Object.create(Operator.prototype);
 Power.prototype.operation = (a, b) => Math.pow(a, b);
 Power.prototype.operationString = 'pow';
 Power.prototype.doDiff = (a, b, variable) => new Multiply(new Power(a, new Subtract(b, new Const(1))), new Add(
-    new Multiply(b, a.diff(variable)), new Multiply(new Multiply(a, new Log(new Const(Math.E), a)), b.diff(variable)))
+    new Multiply(b, a.diff(variable)), new Multiply(new Multiply(a, new Log(E, a)), b.diff(variable)))
 );
 
 const operandsNumber = {
