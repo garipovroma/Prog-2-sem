@@ -58,7 +58,7 @@ Const.prototype.evaluate = function() { return this.value };
 Const.prototype.toString = function() { return this.value.toString() };
 Const.prototype.diff = function() { return new Const(0) };
 
-let variableInd = {
+const variableInd = {
     'x': 0, 'y': 1, 'z': 2
 };
 
