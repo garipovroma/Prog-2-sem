@@ -5,8 +5,8 @@ function Operator (...args) {
 }
 Operator.prototype.evaluate = function(...args) { return this.operation(
     ...this.args.map((i) => (i.evaluate(...args)))) };
-Operator.prototype.toString = function() { return ''.concat(
-    ...this.args.map((i) => i.toString() + ' '), this.operationString) };
+Operator.prototype.toString = function() { return this.args.reduce((accumulator, currentValue) =>
+    accumulator + " " + currentValue.toString()) + " " + this.operationString };
 Operator.prototype.diff = function(variable) { return this.doDiff(...this.args, variable) };
 
 function Add(left, right) {
@@ -66,7 +66,6 @@ function Variable(name) {
     this.name = name;
     this.ind = variableInd[name];
 }
-
 Variable.prototype.evaluate = function(...args) { return args[this.ind] };
 Variable.prototype.toString = function() { return this.name };
 Variable.prototype.diff = function(variable) { return (this.name === variable ? new Const(1) : new Const(0)) };
