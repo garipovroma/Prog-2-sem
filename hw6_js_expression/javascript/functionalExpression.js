@@ -23,7 +23,7 @@ const med3 = (a, b, c) => operation(median, a, b, c);
 
 const constantByString = { 'pi' : pi, 'e' : e };
 const operandsNumber = {
-    '+' : 2, '-' : 2, '*' : 2, '/' : 2, 'avg5' : 5, 'med3' : 3, negate : 1
+    '+' : 2, '-' : 2, '*' : 2, '/' : 2, 'avg5' : 5, 'med3' : 3, 'negate' : 1
 };
 const operationByString = {
     '+' : add, '-' : subtract, '*' : multiply, '/' : divide, 'avg5' : avg5, 'med3' : med3, 'negate' : negate
@@ -31,7 +31,8 @@ const operationByString = {
 
 function parse(expression) {
     let stack = [];
-    const parseSubstring = s => {
+    expression = expression.trim();
+    for (let s of expression.split(/\s+/)) {
         if (s in variableIndex) {
             stack.push(variable(s));
         } else if (s in operationByString) {
@@ -41,8 +42,7 @@ function parse(expression) {
         } else {
             stack.push(cnst(+s));
         }
-    };
-    expression.trim().split(/\s+/).forEach(parseSubstring);
+    }
     return stack.pop();
 }
 
