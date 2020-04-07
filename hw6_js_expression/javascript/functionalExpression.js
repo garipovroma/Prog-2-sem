@@ -31,7 +31,8 @@ const operationByString = {
 
 function parse(expression) {
     let stack = [];
-    const parseSubstring = s => {
+    expression = expression.trim();
+    for (let s of expression.split(/\s+/)) {
         if (s in variableIndex) {
             stack.push(variable(s));
         } else if (s in operationByString) {
@@ -41,8 +42,7 @@ function parse(expression) {
         } else {
             stack.push(cnst(+s));
         }
-    };
-    expression.trim().split(/\s+/).forEach(parseSubstring);
+    }
     return stack.pop();
 }
 
