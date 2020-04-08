@@ -1,62 +1,15 @@
 "use strict"
 
-function Operator (...args) {
-    this.args = args;
+function Expression (evaluate, toString, diff) {
+    this.evaluate = evaluate;
+    this.toString = toString;
+    this.diff = diff;
 }
-Operator.prototype.evaluate = function(...args) { return this.operation(
-    ...this.args.map((i) => (i.evaluate(...args)))) };
-Operator.prototype.toString = function() { return this.args.reduce((accumulator, currentValue) =>
-    accumulator + " " + currentValue.toString()) + " " + this.operationString };
-Operator.prototype.diff = function(variable) { return this.doDiff(...this.args, variable) };
 
-function Add(left, right) {
-    Operator.call(this, left, right);
+function Const(value) {
+    this.value = value;
+    Expression.call(this, () => +value, () => value.toString(), () => new Const(0));
 }
-Add.prototype = Object.create(Operator.prototype);
-Add.prototype.operation = (a, b) => (a + b);
-Add.prototype.operationString = '+';
-Add.prototype.doDiff = (a, b, variable) => new Add(a.diff(variable), b.diff(variable));
-
-function Subtract(left, right) {
-    Operator.call(this, left, right);
-}
-Subtract.prototype = Object.create(Operator.prototype);
-Subtract.prototype.operation = (a, b) => (a - b);
-Subtract.prototype.operationString = '-';
-Subtract.prototype.doDiff = (a, b, variable) => new Subtract(a.diff(variable), b.diff(variable));
-
-function Multiply(left, right) {
-    Operator.call(this, left, right);
-}
-Multiply.prototype = Object.create(Operator.prototype);
-Multiply.prototype.operation = (a, b) => a * b;
-Multiply.prototype.operationString = '*';
-Multiply.prototype.doDiff = (a, b, variable) => new Add(
-    new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable)));
-
-function Divide(left, right) {
-    Operator.call(this, left, right);
-}
-Divide.prototype = Object.create(Operator.prototype);
-Divide.prototype.operation = (a, b) => a / b;
-Divide.prototype.operationString = '/';
-Divide.prototype.doDiff = (a, b, variable) => new Divide(
-    new Subtract(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))), new Multiply(b, b));
-
-function Negate(operand) {
-    Operator.call(this, operand);
-}
-Negate.prototype = Object.create(Operator.prototype);
-Negate.prototype.operation = (x) => -x;
-Negate.prototype.operationString = 'negate';
-Negate.prototype.doDiff = (a, variable) => new Negate(a.diff(variable));
-
-function Const(x) {
-    this.value = x;
-}
-Const.prototype.evaluate = function() { return this.value };
-Const.prototype.toString = function() { return this.value.toString() };
-Const.prototype.diff = function() { return new Const(0) };
 
 const variableInd = {
     'x': 0, 'y': 1, 'z': 2
@@ -65,33 +18,56 @@ const variableInd = {
 function Variable(name) {
     this.name = name;
     this.ind = variableInd[name];
+    Expression.call(this, (...args) => (args[this.ind]), () => name, (variable) =>
+        (name === variable ? new Const(1) : new Const(0)));
 }
-Variable.prototype.evaluate = function(...args) { return args[this.ind] };
-Variable.prototype.toString = function() { return this.name };
-Variable.prototype.diff = function(variable) { return (this.name === variable ? new Const(1) : new Const(0)) };
+
+function Operator (operation, operationString, doDiff, ...exprs) {
+    Expression.call(this,
+        (...args) =>
+            operation(...exprs.map((i) => (i.evaluate(...args)))),
+        () => exprs.reduce((accumulator, currentValue) =>
+            accumulator + " " + currentValue.toString()) + " " + operationString,
+        (variable) =>
+            doDiff(...exprs, variable)
+        );
+}
+
+function Add(left, right) {
+    Operator.call(this, (a, b) => (a + b), '+', (a, b, variable) => new Add(a.diff(variable), b.diff(variable)),
+        left, right);
+}
+function Subtract(left, right) {
+    Operator.call(this, (a, b) => (a - b), '-', (a, b, variable) => new Subtract(a.diff(variable), b.diff(variable)),
+        left, right);
+}
+function Multiply(left, right) {
+    Operator.call(this, (a, b) => (a * b), '*', (a, b, variable) =>
+        new Add(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))), left, right);
+}
+function Divide(left, right) {
+    Operator.call(this, (a, b) => a / b, '/', (a, b, variable) => new Divide(
+        new Subtract(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))), new Multiply(b, b)),
+        left, right);
+}
+function Negate(operand) {
+    Operator.call(this, (x) => -x, 'negate', (a, variable) => new Negate(a.diff(variable)),  operand);
+}
 
 const E = new Const(Math.E);
-
 function Log(left, right) {
-    Operator.call(this, left, right);
+    Operator.call(this, (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a)), 'log',
+        (a, b, variable) => new Divide(new Subtract(new Divide(new Multiply(new Log(E, a), b.diff(variable)), b),
+            new Divide(new Multiply(new Log(E, b), a.diff(variable)), a)), new Multiply(new Log(E, a), new Log(E, a))),
+        left, right
+    );
 }
-Log.prototype = Object.create(Operator.prototype);
-Log.prototype.operation = (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a));
-Log.prototype.operationString = 'log';
-Log.prototype.doDiff = (a, b, variable) => new Divide(new Subtract(new Divide(
-    new Multiply(new Log(E, a), b.diff(variable)), b),
-    new Divide(new Multiply(new Log(E, b), a.diff(variable)), a)
-), new Multiply(new Log(E, a), new Log(E, a)));
-
 function Power(left, right) {
-    Operator.call(this, left, right);
+    Operator.call(this, (a, b) => Math.pow(a, b), 'pow',
+        (a, b, variable) => new Multiply(new Power(a, new Subtract(b, new Const(1))),
+            new Add(new Multiply(b, a.diff(variable)), new Multiply(new Multiply(a, new Log(E, a)), b.diff(variable)))),
+        left, right);
 }
-Power.prototype = Object.create(Operator.prototype);
-Power.prototype.operation = (a, b) => Math.pow(a, b);
-Power.prototype.operationString = 'pow';
-Power.prototype.doDiff = (a, b, variable) => new Multiply(new Power(a, new Subtract(b, new Const(1))), new Add(
-    new Multiply(b, a.diff(variable)), new Multiply(new Multiply(a, new Log(E, a)), b.diff(variable)))
-);
 
 const operandsNumber = {
     '+' : 2,
@@ -114,7 +90,8 @@ const operationByString = {
 
 function parse(expression) {
     let stack = [];
-    const parseSubstring = s => {
+    expression = expression.trim();
+    for (let s of expression.trim().split(/\s+/)) {
         if (s in variableInd) {
             stack.push(new Variable(s));
         } else if (s in operationByString) {
@@ -122,8 +99,7 @@ function parse(expression) {
         } else {
             stack.push(new Const(+s));
         }
-    };
-    expression.trim().split(/\s+/).forEach(parseSubstring);
+    }
     return stack.pop();
 }
 
