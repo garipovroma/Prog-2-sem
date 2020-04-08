@@ -47,7 +47,8 @@ const makeOperator = function(operation, operationString, doDiff) {
 
 const Add = makeOperator(
     (a, b) => (a + b),
-    '+', (a, b, variable) => new Add(a.diff(variable), b.diff(variable))
+    '+',
+    (a, b, variable) => new Add(a.diff(variable), b.diff(variable))
 );
 const Subtract = makeOperator(
     (a, b) => (a - b),
@@ -114,14 +115,16 @@ const operationByString = {
 function parse(expression) {
     let stack = [];
     expression = expression.trim();
-    for (let s of expression.trim().split(/\s+/)) {
+    for (let s of expression.split(/\s+/)) {
+        let cur;
         if (s in variableInd) {
-            stack.push(new Variable(s));
+            cur = new Variable(s);
         } else if (s in operationByString) {
-            stack.push(new operationByString[s](...stack.splice(-operandsNumber[s])));
+            cur = new operationByString[s](...stack.splice(-operandsNumber[s]));
         } else {
-            stack.push(new Const(+s));
+            cur = new Const(+s);
         }
+        stack.push(cur);
     }
     return stack.pop();
 }
