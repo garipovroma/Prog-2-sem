@@ -16,16 +16,21 @@ const createExpression = function(that, evaluate, toString, diff, prefix, postfi
 const Const = function(value) {
     this.value = value;
 };
+
 createExpression(Const,
     function() { return +this.value },
     function() { return this.value.toString() },
-    function() { return new Const(0) },
+    function() { return Zero },
     function() { return this.value.toString() },
     function() { return this.value.toString() }
 );
 const variableInd = {
     "x" : 0, "y" : 1, "z" : 2
 };
+
+const Zero = new Const(0);
+const One = new Const(1);
+
 const Variable = function(name) {
     this.name = name;
     this.ind = variableInd[name];
@@ -33,7 +38,7 @@ const Variable = function(name) {
 createExpression(Variable,
     function(...args) { return args[this.ind] },
     function() { return this.name },
-    function(variable) { return (this.name === variable ? new Const(1) : new Const(0))},
+    function(variable) { return (this.name === variable ? One : Zero)},
     function() { return this.name },
     function() { return this.name }
 );
@@ -103,7 +108,7 @@ const Power = makeOperator(
 
 function buildSum(variable, ...args) {
     if (args.length === 0) {
-        return new Const(0);
+        return Zero;
     } else if (args.length === 1) {
         return new Multiply(args[0].diff(variable), new Power(E, args[0]));
     } else {
@@ -125,11 +130,9 @@ const Sumexp = makeOperator(
 
 let buildSoftmaxDiff = function(variable, ...mas) {
     //console.log(mas.map(cur => cur.toString()).join(" "));
-    if (mas.length === 0) {
+    if (mas.length <= 1) {
         return new Const(0);
-    } else if (mas.length === 1) {
-        return new Const(0);
-    } else if (mas.length >= 2) {
+    } else {
         let ch = new Power(E, mas[0]);
         let zn = new Add(new Power(E, mas[0]), new Power(E, mas[1]));
         for (let i = 2; i < mas.length; i++) {
