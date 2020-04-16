@@ -44,11 +44,11 @@ const makeOperator = function(operation, operationString, doDiff, arity) {
     };
     createExpression(result,
         function(...args_) {return operation(...this.args.map((i) => (i.evaluate(...args_))))},
-        function() { return this.args.reduce((accumulator, currentValue) =>
-            accumulator + " " + currentValue.toString()) + " " + operationString },
-        function(variable) { return doDiff(...this.args, variable) },
-        function() { return "(" + operationString + " " + this.args.map(cur => cur.prefix()).join(' ') + ")" },
-        function() { return "(" + this.args.map(cur => cur.postfix()).join(' ' ) + " " + operationString + ")" }
+        function() { return (this.args.length === 0? "" : this.args.reduce((accumulator, currentValue) =>
+            accumulator + " " + currentValue.toString())) + " " + operationString },
+        function(variable) { return doDiff(variable, ...this.args) },
+        function() { return "(" + operationString + " " + (this.args.length === 0 ? '' : this.args.map(cur => cur.prefix()).join(' ')) + ")" },
+        function() { return "(" + (this.args.length === 0 ? '' : this.args.map(cur => cur.postfix()).join(' ' )) + " " + operationString + ")" }
     );
     result.prototype.arity = arity;
     return result;
@@ -57,31 +57,31 @@ const makeOperator = function(operation, operationString, doDiff, arity) {
 const Add = makeOperator(
     (a, b) => (a + b),
     '+',
-    (a, b, variable) => new Add(a.diff(variable), b.diff(variable)),
+    (variable, a, b) => new Add(a.diff(variable), b.diff(variable)),
     2
 );
 const Subtract = makeOperator(
     (a, b) => (a - b),
     '-',
-    (a, b, variable) => new Subtract(a.diff(variable), b.diff(variable)),
+    (variable, a, b) => new Subtract(a.diff(variable), b.diff(variable)),
     2
 );
 const Negate = makeOperator(
     (x) => -x,
     'negate',
-    (a, variable) => new Negate(a.diff(variable)),
+    (variable, a) => new Negate(a.diff(variable)),
     1
 );
 const Multiply = makeOperator(
     (a, b) => (a * b),
     '*',
-    (a, b, variable) => new Add(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))),
+    (variable, a, b) => new Add(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))),
     2
 );
 const Divide = makeOperator(
     (a, b) => a / b,
     '/',
-    (a, b, variable) => new Divide(new Subtract(new Multiply(a.diff(variable), b), new Multiply(a,
+    (variable, a, b) => new Divide(new Subtract(new Multiply(a.diff(variable), b), new Multiply(a,
         b.diff(variable))), new Multiply(b, b)),
     2
 );
@@ -89,16 +89,63 @@ let E = new Const(Math.E);
 const Log = makeOperator(
     (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a)),
     'log',
-    (a, b, variable) => new Divide(new Subtract(new Divide(new Multiply(new Log(E, a), b.diff(variable)), b),
+    (variable, a, b) => new Divide(new Subtract(new Divide(new Multiply(new Log(E, a), b.diff(variable)), b),
         new Divide(new Multiply(new Log(E, b), a.diff(variable)), a)), new Multiply(new Log(E, a), new Log(E, a))),
     2
 );
 const Power = makeOperator(
     (a, b) => Math.pow(a, b),
     'pow',
-    (a, b, variable) => new Multiply(new Power(a, new Subtract(b, new Const(1))), new Add(new Multiply(b,
+    (variable, a, b) => new Multiply(new Power(a, new Subtract(b, new Const(1))), new Add(new Multiply(b,
         a.diff(variable)), new Multiply(new Multiply(a, new Log(E, a)), b.diff(variable)))),
     2
+);
+
+function buildSum(variable, ...args) {
+    if (args.length === 0) {
+        return new Const(0);
+    } else if (args.length === 1) {
+        return new Multiply(args[0].diff(variable), new Power(E, args[0]));
+    } else {
+        let cur = new Add(new Multiply(args[0].diff(variable), new Power(E, args[0])),
+            new Multiply(args[1].diff(variable), new Power(E, args[1])));
+        for (let i = 2; i < args.length; i++) {
+            cur = new Add(cur, new Multiply(args[i].diff(variable), new Power(E, args[i])));
+        }
+        return cur;
+    }
+}
+
+const Sumexp = makeOperator(
+    (...args) => (args.reduce((accumulator, currentValue) => (accumulator + Math.exp(currentValue)), 0)),
+    'sumexp',
+    (variable, ...mas) => buildSum(variable, ...mas),
+    undefined
+);
+
+let buildSoftmaxDiff = function(variable, ...mas) {
+    //console.log(mas.map(cur => cur.toString()).join(" "));
+    if (mas.length === 0) {
+        return new Const(0);
+    } else if (mas.length === 1) {
+        return new Const(0);
+    } else if (mas.length >= 2) {
+        let ch = new Power(E, mas[0]);
+        let zn = new Add(new Power(E, mas[0]), new Power(E, mas[1]));
+        for (let i = 2; i < mas.length; i++) {
+            zn = new Add(zn, new Power(E, mas[i]));
+        }
+        let res = new Divide(ch, zn);
+        return res.diff(variable);
+    }
+};
+
+const Softmax = makeOperator(
+    (...mas) => (mas.length === 0 ? 0 : (Math.exp(mas[0])) /
+        (mas.reduce((accumulator, currentValue) => (accumulator + Math.exp(currentValue)), 0))),
+    'softmax',
+    (variable, ...args) => buildSoftmaxDiff(variable, ...args),
+    undefined
 );
 
 let CustomError = function(message) {
@@ -114,8 +161,11 @@ const operationByString = {
     '/' : Divide,
     'pow' : Power,
     'log' : Log,
-    'negate' : Negate
+    'negate' : Negate,
+    'sumexp' : Sumexp,
+    'softmax' : Softmax
 };
+const specialOperations = ['softmax', 'sumexp'];
 
 function parse(expression) {
     let stack = [];
@@ -206,18 +256,21 @@ function Parser (source, parseExpression) {
 
 function parseOperation(source) {
     let operation = null;
+    let specialOperation = false;
     if (source.getToken() in operationByString) {
+        if (specialOperations.includes(source.getToken())) {
+            specialOperation = true;
+        }
         operation = operationByString[source.getToken()];
     } else {
         throw new CustomError("unexpected token : " + source.getSubstr());
     }
-    return operation;
+    return [operation, specialOperation];
 }
 
-function parseArguments(source, parse) {
+function parseArguments(source, parse, condition, f) {
     let args = [];
-    source.nextToken();
-    while (source.getToken() !== ')') {
+    while (condition()) {
         if (source.endFound()) {
             throw new CustomError("expected ), but not found : " + source.getSubstr());
         }
@@ -232,7 +285,7 @@ function parseArguments(source, parse) {
         }
         source.nextToken();
     }
-    if (args.length === 0) {
+    if (args.length === 0 && !(specialOperations.includes(source.getToken())) && !f) {
         throw new CustomError("unexpected ) found : " + source.getSubstr());
     }
     return args;
@@ -240,9 +293,12 @@ function parseArguments(source, parse) {
 
 function parsePrefixExpression(source, parse) {
     source.nextToken();
-    let operation = parseOperation(source);
-    let args = parseArguments(source, parse);
-    if (args.length !== operation.prototype.arity) {
+    let mas = parseOperation(source);
+    let operation = mas[0];
+    let f = mas[1];
+    source.nextToken();
+    let args = parseArguments(source, parse, () => (source.getToken() !== ')'), f);
+    if (operation.prototype.arity !== undefined && args.length !== operation.prototype.arity) {
         throw new CustomError("unexpected arity of operation : " + source.getSubstr());
     }
     return new operation(...args);
@@ -250,9 +306,15 @@ function parsePrefixExpression(source, parse) {
 
 function parsePostfixExpression(source, parse) {
     source.nextToken();
-    let args = parseArguments(source, parse);
-    let operation = parseOperation(source);
-    if (args.length !== operation.prototype.arity) {
+    let args = parseArguments(source, parse, () => (!(source.getToken() in operationByString)));
+    let mas = parseOperation(source);
+    let operation = mas[0];
+    let f = mas[1];
+    source.nextToken();
+    if (source.getToken() !== ')') {
+        throw new CustomError("expected ) , but not found : " + source.getSubstr());
+    }
+    if (operation.prototype.arity !== undefined && args.length !== operation.prototype.arity) {
         throw new CustomError("unexpected arity of operation : " + source.getSubstr());
     }
     return new operation(...args);
@@ -265,20 +327,17 @@ function buildSource(expression) {
 }
 
 let parsePrefix = function(expression) {
+    if (expression.trim() === '') {
+        throw new CustomError("unexpected empty expression");
+    }
     let parser = new Parser(buildSource(expression.trim()), parsePrefixExpression);
     return parser.parse();
 };
 
 let parsePostfix = function(expression) {
+    if (expression.trim() === '') {
+        throw new CustomError("unexpected empty expression");
+    }
     let parser = new Parser(buildSource(expression.trim()), parsePostfixExpression);
     return parser.parse();
 };
-
-//  (/ (negate x) 2)
-
-let str = parsePrefix('(/ (negate x) 2)\n');
-console.log(str.toString());
-console.log(str.prefix());
-
-let str1 = parsePrefix('(negate x)');
-console.log(str1.prefix());
