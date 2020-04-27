@@ -1,3 +1,5 @@
+//review
+
 "use strict"
 
 const Expression = function(evaluate, toString, diff, prefix, postfix) {
@@ -43,7 +45,7 @@ createExpression(Variable,
     function() { return this.name }
 );
 
-const makeOperator = function(operation, operationString, doDiff, arity) {
+const makeOperator = function(operation, operationString, doDiff) {
     let result = function(...args) {
         this.args = args;
     };
@@ -55,94 +57,66 @@ const makeOperator = function(operation, operationString, doDiff, arity) {
         function() { return "(" + operationString + " " + (this.args.length === 0 ? '' : this.args.map(cur => cur.prefix()).join(' ')) + ")" },
         function() { return "(" + (this.args.length === 0 ? '' : this.args.map(cur => cur.postfix()).join(' ' )) + " " + operationString + ")" }
     );
-    result.prototype.arity = arity;
+    result.prototype.arity = (operation.length === 0 ? undefined : operation.length);
     return result;
 };
 
 const Add = makeOperator(
     (a, b) => (a + b),
     '+',
-    (variable, a, b) => new Add(a.diff(variable), b.diff(variable)),
-    2
+    (variable, a, b) => new Add(a.diff(variable), b.diff(variable))
 );
 const Subtract = makeOperator(
     (a, b) => (a - b),
     '-',
-    (variable, a, b) => new Subtract(a.diff(variable), b.diff(variable)),
-    2
+    (variable, a, b) => new Subtract(a.diff(variable), b.diff(variable))
 );
 const Negate = makeOperator(
     (x) => -x,
     'negate',
-    (variable, a) => new Negate(a.diff(variable)),
-    1
+    (variable, a) => new Negate(a.diff(variable))
 );
 const Multiply = makeOperator(
     (a, b) => (a * b),
     '*',
-    (variable, a, b) => new Add(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable))),
-    2
+    (variable, a, b) => new Add(new Multiply(a.diff(variable), b), new Multiply(a, b.diff(variable)))
 );
 const Divide = makeOperator(
     (a, b) => a / b,
     '/',
     (variable, a, b) => new Divide(new Subtract(new Multiply(a.diff(variable), b), new Multiply(a,
-        b.diff(variable))), new Multiply(b, b)),
-    2
+        b.diff(variable))), new Multiply(b, b))
 );
-let E = new Const(Math.E);
+
+const E = new Const(Math.E);
 const Log = makeOperator(
     (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a)),
     'log',
     (variable, a, b) => new Divide(new Subtract(new Divide(new Multiply(new Log(E, a), b.diff(variable)), b),
-        new Divide(new Multiply(new Log(E, b), a.diff(variable)), a)), new Multiply(new Log(E, a), new Log(E, a))),
-    2
+        new Divide(new Multiply(new Log(E, b), a.diff(variable)), a)), new Multiply(new Log(E, a), new Log(E, a)))
 );
 const Power = makeOperator(
     (a, b) => Math.pow(a, b),
     'pow',
     (variable, a, b) => new Multiply(new Power(a, new Subtract(b, new Const(1))), new Add(new Multiply(b,
-        a.diff(variable)), new Multiply(new Multiply(a, new Log(E, a)), b.diff(variable)))),
-    2
+        a.diff(variable)), new Multiply(new Multiply(a, new Log(E, a)), b.diff(variable))))
 );
 
-function buildSum(...args) {
-    if (args.length === 0) {
-        return Zero;
-    } else if (args.length === 1) {
-        return new Power(E, args[0]);
-    } else {
-        let cur = new Add(new Power(E, args[0]),new Power(E, args[1]));
-        for (let i = 2; i < args.length; i++) {
-            cur = new Add(cur, new Power(E, args[i]));
-        }
-        return cur;
-    }
-}
+const buildSum = (...args) => (args.reduce((accumulator, currentValue) => (new Add(accumulator, currentValue)), Zero));
+const buildSumExp = (...args) => buildSum(...args.map((currentValue) => (new Power(E, currentValue))));
+const buildSoftMax = (...args) => (args.length === 0 ? Zero : new Divide(new Power(E, args[0]), buildSumExp(...args)));
 
 const Sumexp = makeOperator(
     (...args) => (args.reduce((accumulator, currentValue) => (accumulator + Math.exp(currentValue)), 0)),
     'sumexp',
-    (variable, ...mas) => buildSum(...mas).diff(variable),
-    undefined
+    (variable, ...mas) => buildSumExp(...mas).diff(variable)
 );
-
-let buildSoftmaxDiff = function(...mas) {
-    //console.log(mas.map(cur => cur.toString()).join(" "));
-    if (mas.length <= 1) {
-        return new Const(0);
-    } else {
-        let ch = new Power(E, mas[0]);
-        return new Divide(ch, buildSum(...mas));
-    }
-};
 
 const Softmax = makeOperator(
     (...mas) => (mas.length === 0 ? 0 : (Math.exp(mas[0])) /
         (mas.reduce((accumulator, currentValue) => (accumulator + Math.exp(currentValue)), 0))),
     'softmax',
-    (variable, ...args) => buildSoftmaxDiff(...args).diff(variable),
-    undefined
+    (variable, ...args) => buildSoftMax(...args).diff(variable)
 );
 
 let CustomError = function(message) {
@@ -193,7 +167,7 @@ const Source = function() {
     const skipWhitespaces = () => { while (isWhitespace()) nextChar(); };
     const check = (ch) => (_source[_pos] === ch);
     this.endFound = () => (_pos === _source.length);
-    this.getSubstr = () => "at pos = " + _pos + " : " + _source.substring(Math.max(_pos - 5, 0),
+    this.getSubstr = () => _source.substring(Math.max(_pos - 5, 0),
         Math.min(_pos + 5, _source.length - 1));
     this.nextToken = function() {
         skipWhitespaces();
@@ -220,11 +194,8 @@ const Source = function() {
     };
 };
 
-function Parser (source, parseExpression) {
+function Parser(source, parseExpression) {
     this.parse = () => {
-        if (source.getToken() === '') {
-            throw new CustomError("unexpected empty expression");
-        }
         let res = null;
         if (source.getToken() === '(') {
             res = _parse(true, true);
@@ -291,6 +262,8 @@ function parseArguments(source, parse, condition, f) {
     return args;
 }
 
+// :NOTE: tto many code for parser. Limit is 100 lines (without blank lines)
+// :NOTE: copy-paste code for parser. They are equal except `args` and `if`
 function parsePrefixExpression(source, parse) {
     source.nextToken();
     let mas = parseOperation(source);
@@ -327,11 +300,19 @@ function buildSource(expression) {
 }
 
 let parsePrefix = function(expression) {
-    let parser = new Parser(buildSource(expression), parsePrefixExpression);
+    if (expression.trim() === '') {
+        throw new CustomError("unexpected empty expression");
+    }
+    let parser = new Parser(buildSource(expression.trim()), parsePrefixExpression);
     return parser.parse();
 };
 
 let parsePostfix = function(expression) {
-    let parser = new Parser(buildSource(expression), parsePostfixExpression);
+    if (expression.trim() === '') {
+        throw new CustomError("unexpected empty expression");
+    }
+    let parser = new Parser(buildSource(expression.trim()), parsePostfixExpression);
     return parser.parse();
 };
+
+let x = parsePostfix('(x sumexp)')
