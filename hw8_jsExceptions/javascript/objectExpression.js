@@ -126,15 +126,8 @@ CustomError.prototype = Object.create(Error.prototype);
 CustomError.prototype.name = "CustomError";
 
 const operationByString = {
-    '+' : Add,
-    '-' : Subtract,
-    '*' : Multiply,
-    '/' : Divide,
-    'pow' : Power,
-    'log' : Log,
-    'negate' : Negate,
-    'sumexp' : Sumexp,
-    'softmax' : Softmax
+    '+' : Add, '-' : Subtract, '*' : Multiply, '/' : Divide, 'pow' : Power, 'log' : Log, 'negate' : Negate,
+    'sumexp' : Sumexp, 'softmax' : Softmax
 };
 const specialOperations = ['softmax', 'sumexp'];
 
@@ -166,9 +159,10 @@ const Source = function() {
     const isWhitespace = () => (_source[_pos] === ' ');
     const skipWhitespaces = () => { while (isWhitespace()) nextChar(); };
     const check = (ch) => (_source[_pos] === ch);
+    this.checkEmpty = () => (_source.length === 0);
     this.endFound = () => (_pos === _source.length);
-    this.getSubstr = () => _source.substring(Math.max(_pos - 5, 0),
-        Math.min(_pos + 5, _source.length - 1));
+    this.getSubstr = () => _source.substring(Math.max(_pos - 10, 0),
+        Math.min(_pos + 10, _source.length));
     this.nextToken = function() {
         skipWhitespaces();
         if (check('(')) {
@@ -194,23 +188,19 @@ const Source = function() {
     };
 };
 
-function Parser(source, parseExpression) {
+function Parser(source, parseExpression, argumentsCondition, orderOfFunctions, contidionsOfError, checkErrors, makeResult) {
     this.parse = () => {
-        let res = null;
-        if (source.getToken() === '(') {
-            res = _parse(true, true);
-        } else {
-            res = _parse(false, false);
+        if (source.checkEmpty()) {
+            throw new CustomError("unexpected empty expression");
         }
+        let res = null;
+        res = _parse(source.getToken() === '(');
         if (!source.endFound()) {
             throw new CustomError("unexpected token : " + source.getSubstr());
         }
         return res;
     };
-    function _parse(needToken, needBracket) {
-        if (needToken) {
-            source.getToken();
-        }
+    function _parse(needBracket) {
         if (!needBracket) {
             if (source.getToken() in variableInd) {
                 return new Variable(source.getToken());
@@ -220,8 +210,8 @@ function Parser(source, parseExpression) {
                 throw new CustomError("unexpected token :" + source.getSubstr());
             }
         }
-        let res = parseExpression(source, _parse);
-        return res;
+        return parseExpression(source, _parse, argumentsCondition, orderOfFunctions,
+            contidionsOfError, checkErrors, makeResult);
     }
 }
 
@@ -236,10 +226,11 @@ function parseOperation(source) {
     } else {
         throw new CustomError("unexpected token : " + source.getSubstr());
     }
+    source.nextToken();
     return [operation, specialOperation];
 }
 
-function parseArguments(source, parse, condition, f) {
+function parseArguments(source, parse, condition, previousCall) {
     let args = [];
     while (condition()) {
         if (source.endFound()) {
@@ -256,41 +247,23 @@ function parseArguments(source, parse, condition, f) {
         }
         source.nextToken();
     }
-    if (args.length === 0 && !(specialOperations.includes(source.getToken())) && !f) {
+    if (args.length === 0 && !(specialOperations.includes(source.getToken()))
+        && previousCall !== undefined && !previousCall[1]) {
         throw new CustomError("unexpected ) found : " + source.getSubstr());
     }
     return args;
 }
 
-// :NOTE: tto many code for parser. Limit is 100 lines (without blank lines)
-// :NOTE: copy-paste code for parser. They are equal except `args` and `if`
-function parsePrefixExpression(source, parse) {
+function parseExpression(source, parse, argumentsCondition, orderOfFunctions, contidionsOfError, checkErrors, makeResult) {
     source.nextToken();
-    let mas = parseOperation(source);
-    let operation = mas[0];
-    let f = mas[1];
-    source.nextToken();
-    let args = parseArguments(source, parse, () => (source.getToken() !== ')'), f);
-    if (operation.prototype.arity !== undefined && args.length !== operation.prototype.arity) {
-        throw new CustomError("unexpected arity of operation : " + source.getSubstr());
+    let firstCall = orderOfFunctions[0](source, parse, argumentsCondition);
+    let secondCall = orderOfFunctions[1](source, parse, argumentsCondition, firstCall);
+    for (let i = 0; i < contidionsOfError.length; i++) {
+        if (contidionsOfError[i](firstCall, secondCall, source)) {
+            checkErrors[i](source);
+        }
     }
-    return new operation(...args);
-}
-
-function parsePostfixExpression(source, parse) {
-    source.nextToken();
-    let args = parseArguments(source, parse, () => (!(source.getToken() in operationByString)));
-    let mas = parseOperation(source);
-    let operation = mas[0];
-    let f = mas[1];
-    source.nextToken();
-    if (source.getToken() !== ')') {
-        throw new CustomError("expected ) , but not found : " + source.getSubstr());
-    }
-    if (operation.prototype.arity !== undefined && args.length !== operation.prototype.arity) {
-        throw new CustomError("unexpected arity of operation : " + source.getSubstr());
-    }
-    return new operation(...args);
+    return makeResult(firstCall, secondCall);
 }
 
 function buildSource(expression) {
@@ -299,20 +272,30 @@ function buildSource(expression) {
     return source;
 }
 
-let parsePrefix = function(expression) {
-    if (expression.trim() === '') {
-        throw new CustomError("unexpected empty expression");
-    }
-    let parser = new Parser(buildSource(expression.trim()), parsePrefixExpression);
+const prefixOrderOfFunctions = [parseOperation, parseArguments];
+const prefixArgumentsParseCondition = function(source) { return () => source.getToken() !== ')'; };
+const prefixConditionsOfError = [(firstCall, secondCall) =>
+    (firstCall[0].prototype.arity !== undefined && secondCall.length !== firstCall[0].prototype.arity)];
+const prefixCheckErrors = [(source) => {throw new CustomError("unexpected arity of operation : " + source.getSubstr())}];
+const prefixMakeResult = (firstCall, secondCall) => (new firstCall[0](...secondCall));
+const parsePrefix = function(expression) {
+    const source = buildSource(expression);
+    const parser = new Parser(source, parseExpression, prefixArgumentsParseCondition(source),
+        prefixOrderOfFunctions, prefixConditionsOfError, prefixCheckErrors, prefixMakeResult);
     return parser.parse();
 };
 
-let parsePostfix = function(expression) {
-    if (expression.trim() === '') {
-        throw new CustomError("unexpected empty expression");
-    }
-    let parser = new Parser(buildSource(expression.trim()), parsePostfixExpression);
+const postfixArgumentsParseCondition = function(source) { return () => (!(source.getToken() in operationByString)); };
+const postfixOrderOfFunctions = [parseArguments, parseOperation];
+const postfixConditionsOfError = [(firstCall, secondCall, source) => (source.getToken() !== ')'),
+    (firstCall, secondCall) =>
+        (secondCall[0].prototype.arity !== undefined && firstCall.length !== secondCall[0].prototype.arity)];
+const postfixCheckErrors = [(source) => {throw new CustomError("expected ) , but not found : " + source.getSubstr())},
+    (source) => {throw new CustomError("unexpected arity of operation : " + source.getSubstr())}];
+const postfixMakeResult = (firstCall, secondCall) => new secondCall[0](...firstCall);
+const parsePostfix = function(expression) {
+    const source = buildSource(expression);
+    const parser = new Parser(source, parseExpression, postfixArgumentsParseCondition(source),
+        postfixOrderOfFunctions, postfixConditionsOfError, postfixCheckErrors, postfixMakeResult);
     return parser.parse();
 };
-
-let x = parsePostfix('(x sumexp)')
