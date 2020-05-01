@@ -124,6 +124,7 @@ let CustomError = function(message) {
 };
 CustomError.prototype = Object.create(Error.prototype);
 CustomError.prototype.name = "CustomError";
+CustomError.prototype.constructor = CustomError;
 
 const operationByString = {
     '+' : Add, '-' : Subtract, '*' : Multiply, '/' : Divide, 'pow' : Power, 'log' : Log, 'negate' : Negate,
@@ -161,7 +162,7 @@ const Source = function() {
     const check = (ch) => (_source[_pos] === ch);
     this.checkEmpty = () => (_source.length === 0);
     this.endFound = () => (_pos === _source.length);
-    this.getSubstr = () => _source.substring(Math.max(_pos - 10, 0),
+    this.getSubstr = () => _source.substring(Math.max(_pos - 15, 0),
         Math.min(_pos + 10, _source.length));
     this.nextToken = function() {
         skipWhitespaces();
@@ -224,7 +225,7 @@ function parseOperation(source) {
         }
         operation = operationByString[source.getToken()];
     } else {
-        throw new CustomError("unexpected token : " + source.getSubstr());
+        throw new CustomError("operation expected, but not found : " + source.getSubstr());
     }
     source.nextToken();
     return [operation, specialOperation];
@@ -234,7 +235,7 @@ function parseArguments(source, parse, condition, previousCall) {
     let args = [];
     while (condition()) {
         if (source.endFound()) {
-            throw new CustomError("expected ), but not found : " + source.getSubstr());
+            throw new CustomError("unexpected end of expression in brackets : " + source.getSubstr());
         }
         if (source.getToken() === '(') {
             args.push(parse(true, true));
@@ -290,7 +291,7 @@ const postfixOrderOfFunctions = [parseArguments, parseOperation];
 const postfixConditionsOfError = [(firstCall, secondCall, source) => (source.getToken() !== ')'),
     (firstCall, secondCall) =>
         (secondCall[0].prototype.arity !== undefined && firstCall.length !== secondCall[0].prototype.arity)];
-const postfixCheckErrors = [(source) => {throw new CustomError("expected ) , but not found : " + source.getSubstr())},
+const postfixCheckErrors = [(source) => {throw new CustomError("bracket(s) expected , but not found : " + source.getSubstr())},
     (source) => {throw new CustomError("unexpected arity of operation : " + source.getSubstr())}];
 const postfixMakeResult = (firstCall, secondCall) => new secondCall[0](...firstCall);
 const parsePostfix = function(expression) {
