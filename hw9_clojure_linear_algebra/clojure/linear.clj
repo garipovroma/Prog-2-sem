@@ -14,13 +14,17 @@
 
 (defn v-apply-by-elements [operator args сheck-function]
   {:pre [(vectors-sizes-equals? args) (every? сheck-function args)]}
-  (if (every? number? args) (apply operator args) (apply mapv operator args))
-  )
-(defn v+ [& args] (v-apply-by-elements + args is-vector?))
-(defn v- [& args] (v-apply-by-elements - args is-vector?))
-(defn v* [& args] (v-apply-by-elements * args is-vector?))
-(defn scalar [& args] (reduce + (v-apply-by-elements * args is-vector?)))
+  (if (every? number? args) (apply operator args) (apply mapv operator args)))
 
+(defn abstract-operation [checker] (fn [operator] (fn [& args] (v-apply-by-elements operator args checker))))
+(def vector-operation (abstract-operation is-vector?))
+(def matrix-operation (abstract-operation is-matrix?))
+
+(def v+ (vector-operation +))
+(def v- (vector-operation -))
+(def v* (vector-operation *))
+
+(defn scalar [& args] {:pre [(every? is-vector? args) (vectors-sizes-equals? args)]} (reduce + (apply mapv * args)))
 (defn simple-vect [[x1, y1, z1], [x2, y2, z2]]
   (vector (- (* y1 z2) (* y2 z1)) (- (* x2 z1)  (* x1 z2)) (- (* x1 y2) (* x2 y1))))
 (defn vect [& args]
@@ -28,25 +32,20 @@
   (reduce simple-vect args))
 (defn v*s [v & args] (reduce (fn [v' s'] (mapv (partial * s') v')) v args))
 
-(defn m+ [& args] (v-apply-by-elements v+ args is-matrix?))
-(defn m- [& args] (v-apply-by-elements v- args is-matrix?))
-(defn m* [& args] (v-apply-by-elements v* args is-matrix?))
-
-(defn m*s [m & args]
-  {:pre [(is-matrix? m) (every? number? args)]}
+(def m+ (matrix-operation v+))
+(def m- (matrix-operation v-))
+(def m* (matrix-operation v*))
+(defn m*s [m & args] {:pre [(is-matrix? m) (every? number? args)]}
   (reduce (fn [m' s] (mapv (fn [x] (v*s x s)) m')) m args))
-(defn m*v [m v]
-  {:pre [(is-matrix? m) (is-vector? v)]}
-  (mapv (fn [x] (scalar x v)) m))
-(defn transpose [m]
-  {:pre [(is-matrix? m)]}
-  (apply mapv vector m))
-(defn simple-prod [a, b] (mapv (fn [x] (m*v (transpose b) x) ) a))
-(defn m*m [& args] (reduce simple-prod args))
+(defn m*v [m v] {:pre [(is-matrix? m) (is-vector? v)]} (mapv (fn [x] (scalar x v)) m))
 
+(defn transpose [m] {:pre [(is-matrix? m)]} (apply mapv vector m))
 (defn simple-prod [a, b] (mapv (fn [x] (m*v (transpose b) x)) a))
 (defn m*m [& args] (reduce simple-prod args))
 
-(defn t+ [& t] (if (is-vector? (first t)) (apply v+ t) (v-apply-by-elements t+ t is-tensor?)))
-(defn t- [& t] (if (is-vector? (first t)) (apply v- t) (v-apply-by-elements t- t is-tensor?)))
-(defn t* [& t] (if (is-vector? (first t)) (apply v* t) (v-apply-by-elements t* t is-tensor?)))
+(defn tensor-operation [vector-operation this-operation t]
+  (if (is-vector? (first t)) (apply vector-operation t) (v-apply-by-elements this-operation t is-tensor?)))
+
+(defn t+ [& t] (tensor-operation v+ t+ t))
+(defn t- [& t] (tensor-operation v- t- t))
+(defn t* [& t] (tensor-operation v* t* t))
