@@ -12,13 +12,18 @@
     )
   )
 
-(defn v-apply-by-elements [operator args сheck-function]
-  {:pre [(vectors-sizes-equals? args) (every? сheck-function args)]}
-  (if (every? number? args) (apply operator args) (apply mapv operator args)))
+(defn abstract-operation [check-function]
+  (fn [operation]
+    (letfn [(recursive-operation [& args]
+              {:pre [(or (every? number? args) (vectors-sizes-equals? args))]}
+              (if (every? number? args) (apply operation args) (apply mapv recursive-operation args)))]
+      (fn [& args]
+        {:pre [(every? check-function args)]}
+        (apply recursive-operation args)))))
 
-(defn abstract-operation [checker] (fn [operator] (fn [& args] (v-apply-by-elements operator args checker))))
 (def vector-operation (abstract-operation is-vector?))
 (def matrix-operation (abstract-operation is-matrix?))
+(def tensor-operation (abstract-operation is-tensor?))
 
 (def v+ (vector-operation +))
 (def v- (vector-operation -))
@@ -32,9 +37,9 @@
   (reduce simple-vect args))
 (defn v*s [v & args] (reduce (fn [v' s'] (mapv (partial * s') v')) v args))
 
-(def m+ (matrix-operation v+))
-(def m- (matrix-operation v-))
-(def m* (matrix-operation v*))
+(def m+ (matrix-operation +))
+(def m- (matrix-operation -))
+(def m* (matrix-operation *))
 (defn m*s [m & args] {:pre [(is-matrix? m) (every? number? args)]}
   (reduce (fn [m' s] (mapv (fn [x] (v*s x s)) m')) m args))
 (defn m*v [m v] {:pre [(is-matrix? m) (is-vector? v)]} (mapv (fn [x] (scalar x v)) m))
@@ -43,9 +48,6 @@
 (defn simple-prod [a, b] (mapv (fn [x] (m*v (transpose b) x)) a))
 (defn m*m [& args] (reduce simple-prod args))
 
-(defn tensor-operation [vector-operation this-operation t]
-  (if (is-vector? (first t)) (apply vector-operation t) (v-apply-by-elements this-operation t is-tensor?)))
-
-(defn t+ [& t] (tensor-operation v+ t+ t))
-(defn t- [& t] (tensor-operation v- t- t))
-(defn t* [& t] (tensor-operation v* t* t))
+(def t+ (tensor-operation +))
+(def t- (tensor-operation -))
+(def t* (tensor-operation *))
