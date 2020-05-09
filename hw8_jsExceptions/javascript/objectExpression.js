@@ -10,46 +10,48 @@ const Expression = function(evaluate, toString, diff, prefix, postfix) {
     this.prototype.postfix = postfix;
 };
 
-const createExpression = function(that, evaluate, toString, diff, prefix, postfix) {
+const setMethods = function(that, evaluate, toString, diff, prefix, postfix) {
     that.prototype = Object.create(Expression.prototype);
     Expression.call(that, evaluate, toString, diff, prefix, postfix);
 };
 
-const Const = function(value) {
-    this.value = value;
+const createSimpleExpression = function(body, get, toString, doDiff) {
+    let result = body;
+    setMethods(result, get, toString, doDiff, toString, toString);
+    return result;
 };
 
-createExpression(Const,
+// :NOTE: Const and Variable should be declared in the same way as other expressions (const Const = someFactory(...))
+// My :NOTE: fixed
+const Const = createSimpleExpression(
+    function(value) { this.value = value; },
     function() { return +this.value },
-    function() { return this.value.toString() },
-    function() { return Zero },
-    function() { return this.value.toString() },
-    function() { return this.value.toString() }
+    function() { return this.value.toString(); },
+    () => Zero
 );
+
 const variableInd = {
     "x" : 0, "y" : 1, "z" : 2
 };
 
+const Variable = createSimpleExpression(
+    function(name) { this.name = name, this.ind = variableInd[name]; },
+    function(...args) { return args[this.ind]; },
+    function() { return this.name; },
+    function(variable) { return (this.name === variable ? One : Zero); }
+);
+
 const Zero = new Const(0);
 const One = new Const(1);
 
-const Variable = function(name) {
-    this.name = name;
-    this.ind = variableInd[name];
-};
-createExpression(Variable,
-    function(...args) { return args[this.ind] },
-    function() { return this.name },
-    function(variable) { return (this.name === variable ? One : Zero)},
-    function() { return this.name },
-    function() { return this.name }
-);
+let operationByString = {};
+let specialOperations = [];
 
-const makeOperator = function(operation, operationString, doDiff) {
+const makeOperator = function(operation, operationString, doDiff, special = false) {
     let result = function(...args) {
         this.args = args;
     };
-    createExpression(result,
+    setMethods(result,
         function(...args_) {return operation(...this.args.map((i) => (i.evaluate(...args_))))},
         function() { return (this.args.length === 0? "" : this.args.reduce((accumulator, currentValue) =>
             accumulator + " " + currentValue.toString())) + " " + operationString },
@@ -58,11 +60,13 @@ const makeOperator = function(operation, operationString, doDiff) {
         function() { return "(" + (this.args.length === 0 ? '' : this.args.map(cur => cur.postfix()).join(' ' )) + " " + operationString + ")" }
     );
     result.prototype.arity = (operation.length === 0 ? undefined : operation.length);
+    operationByString[operationString] = result;
+    if (special) {
+        specialOperations.push(operationString);
+    }
     return result;
 };
 
-//:NOTE: arity can be calculated automatically
-// My :NOTE: fixed
 const Add = makeOperator(
     (a, b) => (a + b),
     '+',
@@ -90,8 +94,6 @@ const Divide = makeOperator(
         b.diff(variable))), new Multiply(b, b))
 );
 
-// :NOTE: why it's not const?
-// My :NOTE: fixed
 const E = new Const(Math.E);
 const Log = makeOperator(
     (a, b) => Math.log(Math.abs(b)) / Math.log(Math.abs(a)),
@@ -113,45 +115,54 @@ const buildSoftMax = (...args) => (args.length === 0 ? Zero : new Divide(new Pow
 const Sumexp = makeOperator(
     (...args) => (args.reduce((accumulator, currentValue) => (accumulator + Math.exp(currentValue)), 0)),
     'sumexp',
-    (variable, ...mas) => buildSumExp(...mas).diff(variable)
+    (variable, ...mas) => buildSumExp(...mas).diff(variable),
+    true
 );
 
 const Softmax = makeOperator(
     (...mas) => (mas.length === 0 ? 0 : (Math.exp(mas[0])) /
         (mas.reduce((accumulator, currentValue) => (accumulator + Math.exp(currentValue)), 0))),
     'softmax',
-    (variable, ...args) => buildSoftMax(...args).diff(variable)
+    (variable, ...args) => buildSoftMax(...args).diff(variable),
+    true
 );
 
-let CustomError = function(message) {
+// :NOTE: why it's not const?
+// My :NOTE: fixed
+const ParsingError = function(message) {
     this.message = message;
 };
-CustomError.prototype = Object.create(Error.prototype);
-CustomError.prototype.name = "CustomError";
-CustomError.prototype.constructor = CustomError;
+ParsingError.prototype = Object.create(Error.prototype);
+ParsingError.prototype.name = "CustomError";
+ParsingError.prototype.constructor = ParsingError;
 
-const makeError = function (messagePrefix) {
+// :NOTE: when have the rules changed? Why it's not wrapped into some factory method?
+// My :NOTE: fixed
+const makeError = function (name, messagePrefix) {
     let result = function(source) {
-        CustomError.call(this, messagePrefix + source.getSubstr());
+        ParsingError.call(this, messagePrefix + " at pos = " + source.getPos() + ", substring : " + source.getSubstr());
     };
-    result.prototype = Object.create(CustomError.prototype);
-    result.prototype.constructor = CustomError;
+    result.prototype = Object.create(ParsingError.prototype);
+    result.prototype.constructor = ParsingError;
+    result.prototype.name = name;
     return result;
 };
 
-const UnexpectedTokenError = new makeError('unexpected token : ');
-const UnexpectedEndOfExpressionError = new makeError('unexpected end of expression : ');
-const UnexpectedArityOfOperationError = new makeError('unexpected arity of operation : ');
-const BracketNotFoundError = new makeError('bracket(s) expected , but not found : ');
-const UnexpectedEmptyError = new makeError('unexpected empty expression');
-const OperationNotFoundError = new makeError('expected operation, but not found');
-const UnexpectedBracketError = new makeError('unexpected ) found : ');
-
-const operationByString = {
+const UnexpectedTokenError = new makeError('UnexpectedTokenError', 'unexpected token : ');
+const UnexpectedEndOfExpressionError = new makeError('UnexpectedEndOfExpressionError', 'unexpected end of expression : ');
+const UnexpectedArityOfOperationError = new makeError('UnexpectedArityOfOperationError', 'unexpected arity of operation : ');
+const BracketNotFoundError = new makeError('BracketNotFoundError', 'bracket(s) expected , but not found : ');
+const UnexpectedEmptyExpressionError = new makeError('UnexpectedEmptyExpressionError', 'unexpected empty expression');
+const OperationNotFoundError = new makeError('OperationNotFoundError', 'expected operation, but not found');
+const UnexpectedBracketError = new makeError('UnexpectedBracketError', 'unexpected ) found : ');
+const PostfixTypeOfExpressionError = new makeError('PostfixTypeOfExpressionError', 'postfix type of expression expected, but not found : ');
+const PrefixTypeOfExpressionError = new makeError('PrefixTypeOfExpressionError', 'Prefix type of expression expected, but not found : ');
+const UnexpectedPositionOfOperationError = new makeError('UnexpectedPositionOfOperationError', 'unexpected position of operation in bracket :');
+// :NOTE: duplicated operators signs declaration (they are already mentioned in operators)
+/*const operationByString = { My :NOTE: now it's calculating automatically in makeOperator function
     '+' : Add, '-' : Subtract, '*' : Multiply, '/' : Divide, 'pow' : Power, 'log' : Log, 'negate' : Negate,
     'sumexp' : Sumexp, 'softmax' : Softmax
-};
-const specialOperations = ['softmax', 'sumexp'];
+};*/
 
 function parse(expression) {
     let stack = [];
@@ -175,6 +186,7 @@ const Source = function() {
     let _source = null;
     let _pos = 0;
     let _curToken = '';
+    let _sizesDiff = 0;
     const getCh = () => _source[_pos];
     const hasNext = () =>  (_pos < _source.length);
     const nextChar = () => (hasNext() ? _source[_pos++] : '\0');
@@ -185,6 +197,7 @@ const Source = function() {
     this.endFound = () => (_pos === _source.length);
     this.getSubstr = () => _source.substring(Math.max(_pos - 15, 0),
         Math.min(_pos + 10, _source.length));
+    this.getPos = () => _sizesDiff + _pos + 1;
     this.nextToken = function() {
         skipWhitespaces();
         if (check('(')) {
@@ -205,123 +218,77 @@ const Source = function() {
     this.getToken = () => _curToken;
     this.setSource = function (expression) {
         _pos = 0;
+        _sizesDiff = expression.length;
         _source = expression.trim();
+        _sizesDiff -= _source.length;
         this.nextToken();
     };
 };
 
-function Parser(source, parseExpression, argumentsCondition, orderOfFunctions, contidionsOfError, checkErrors, makeResult) {
-    this.parse = () => {
-        if (source.checkEmpty()) {
-            throw new UnexpectedEmptyError(source);
-        }
-        let res = null;
-        res = _parse(source.getToken() === '(');
-        if (!source.endFound()) {
-            throw new UnexpectedTokenError(source);
-        }
-        return res;
-    };
-    function _parse(needBracket) {
-        if (!needBracket) {
-            if (source.getToken() in variableInd) {
-                return new Variable(source.getToken());
-            } else if (!isNaN(+source.getToken())) {
-                return new Const(source.getToken());
-            } else {
-                throw new UnexpectedTokenError(source);
-            }
-        }
-        return parseExpression(source, _parse, argumentsCondition, orderOfFunctions,
-            contidionsOfError, checkErrors, makeResult);
-    }
-}
-
-function parseOperation(source) {
-    let operation = null;
-    let specialOperation = false;
-    if (source.getToken() in operationByString) {
-        if (specialOperations.includes(source.getToken())) {
-            specialOperation = true;
-        }
-        operation = operationByString[source.getToken()];
-    } else {
-        throw new OperationNotFoundError(source);
-    }
-    source.nextToken();
-    return [operation, specialOperation];
-}
-
-function parseArguments(source, parse, condition, previousCall) {
-    let args = [];
-    while (condition()) {
-        if (source.endFound()) {
-            throw new UnexpectedEndOfExpressionError(source);
-        }
-        if (source.getToken() === '(') {
-            args.push(parse(true, true));
-        } else if (source.getToken() in variableInd) {
-            args.push(new Variable(source.getToken()));
-        } else if (!isNaN(+source.getToken())) {
-            args.push(new Const(source.getToken()));
-        } else {
-            throw new UnexpectedTokenError(source);
-        }
-        source.nextToken();
-    }
-    if (args.length === 0 && !(specialOperations.includes(source.getToken()))
-        && previousCall !== undefined && !previousCall[1]) {
-        throw new UnexpectedBracketError(source);
-    }
-    return args;
-}
-
-// :NOTE: tto many code for parser. Limit is 100 lines (without blank lines)
-// :NOTE: copy-paste code for parser. They are equal except `args` and `if`
-
-// My :NOTE: copy-paste code deleted, now it takes up less lines of code
-function parseExpression(source, parse, argumentsCondition, orderOfFunctions, contidionsOfError, checkErrors, makeResult) {
-    source.nextToken();
-    let firstCall = orderOfFunctions[0](source, parse, argumentsCondition);
-    let secondCall = orderOfFunctions[1](source, parse, argumentsCondition, firstCall);
-    for (let i = 0; i < contidionsOfError.length; i++) {
-        if (contidionsOfError[i](firstCall, secondCall, source)) {
-            checkErrors[i](source);
-        }
-    }
-    return makeResult(firstCall, secondCall);
-}
-
 function buildSource(expression) {
     let source = new Source();
-    source.setSource(expression.trim());
+    source.setSource(expression);
     return source;
 }
 
-const prefixOrderOfFunctions = [parseOperation, parseArguments];
-const prefixArgumentsParseCondition = function(source) { return () => source.getToken() !== ')'; };
-const prefixConditionsOfError = [(firstCall, secondCall) =>
-    (firstCall[0].prototype.arity !== undefined && secondCall.length !== firstCall[0].prototype.arity)];
-const prefixCheckErrors = [(source) => {throw new UnexpectedArityOfOperationError(source)}];
-const prefixMakeResult = (firstCall, secondCall) => (new firstCall[0](...secondCall));
-const parsePrefix = function(expression) {
-    const source = buildSource(expression);
-    const parser = new Parser(source, parseExpression, prefixArgumentsParseCondition(source),
-        prefixOrderOfFunctions, prefixConditionsOfError, prefixCheckErrors, prefixMakeResult);
-    return parser.parse();
+const createParser = function(mode) {
+    const _mode = mode;
+    let _source = undefined;
+    const test = function(cond, error) { if (cond) throw new error(_source); };
+    // My :NOTE: all errors are getting substring from source, not whole string of expression
+    const error = function(err) { test(true, err); };
+    function beginParse(expression) {
+        _source = buildSource(expression);
+        test(_source.checkEmpty(), UnexpectedEmptyExpressionError);
+        let result = parse();
+        test(!_source.endFound(), UnexpectedTokenError);
+        return result;
+    }
+    function parse() {
+        if (_source.getToken() === '(') {
+            let operation = undefined, specialOperation = false, args = [], posOfOperatorInBracket = -1, pos = 0;
+            _source.nextToken();
+            while (!_source.endFound() && _source.getToken() !== ')') {
+                if (_source.getToken() === '(') {
+                    args.push(parse());
+                } else if (_source.getToken() in operationByString) {
+                    test(operation !== undefined, UnexpectedPositionOfOperationError);
+                    operation = operationByString[_source.getToken()];
+                    posOfOperatorInBracket = pos;
+                    specialOperation = (specialOperations.includes(_source.getToken()));
+                } else if (_source.getToken() in variableInd) {
+                    args.push(new Variable(_source.getToken()));
+                } else if (!isNaN(+_source.getToken())) {
+                    args.push(new Const(_source.getToken()));
+                } else {
+                    error(UnexpectedTokenError);
+                }
+                pos++;
+                _source.nextToken();
+            }
+            test(_source.getToken() !== ')', BracketNotFoundError);
+            test(operation === undefined, OperationNotFoundError);
+            test(_mode === 'prefix' && posOfOperatorInBracket !== 0, PrefixTypeOfExpressionError);
+            test(_mode === 'postfix' && posOfOperatorInBracket !== pos - 1, PostfixTypeOfExpressionError);
+            test(operation.prototype.arity !== args.length && !specialOperation, UnexpectedArityOfOperationError);
+            return new operation(...args);
+        } else {
+            if (_source.getToken() in variableInd) {
+                return new Variable(_source.getToken());
+            } else if (!isNaN(+_source.getToken())) {
+                return new Const(_source.getToken());
+            } else {
+                error(UnexpectedTokenError);
+            }
+        }
+    }
+    return beginParse;
 };
 
-const postfixArgumentsParseCondition = function(source) { return () => (!(source.getToken() in operationByString)); };
-const postfixOrderOfFunctions = [parseArguments, parseOperation];
-const postfixConditionsOfError = [(firstCall, secondCall, source) => (source.getToken() !== ')'),
-    (firstCall, secondCall) =>
-        (secondCall[0].prototype.arity !== undefined && firstCall.length !== secondCall[0].prototype.arity)];
-const postfixCheckErrors = [(source) => {throw new BracketNotFoundError(source)},
-    (source) => {throw new UnexpectedArityOfOperationError(source)}];
-const postfixMakeResult = (firstCall, secondCall) => new secondCall[0](...firstCall);
-const parsePostfix = function(expression) {
-    const source = buildSource(expression);
-    const parser = new Parser(source, parseExpression, postfixArgumentsParseCondition(source),
-        postfixOrderOfFunctions, postfixConditionsOfError, postfixCheckErrors, postfixMakeResult);
-    return parser.parse();
-};
+// :NOTE: the rest of file looks like copy-pasted code with small variations
+// My :NOTE: fixed
+let parsePrefix = createParser('prefix');
+let parsePostfix = createParser('postfix');
+
+
+
