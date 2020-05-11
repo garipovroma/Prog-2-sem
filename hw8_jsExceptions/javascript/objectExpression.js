@@ -16,7 +16,7 @@ const setMethods = function(that, evaluate, toString, diff, prefix, postfix) {
 };
 
 const createSimpleExpression = function(body, get, toString, doDiff) {
-    let result = body;
+    const result = body;
     setMethods(result, get, toString, doDiff, toString, toString);
     return result;
 };
@@ -48,15 +48,15 @@ let operationByString = {};
 let specialOperations = [];
 
 const makeOperator = function(operation, operationString, doDiff, special = false) {
-    let result = function(...args) {
+    const result = function(...args) {
         this.args = args;
     };
     setMethods(result,
         function(...args_) {return operation(...this.args.map((i) => (i.evaluate(...args_))))},
         function() { return this.args.join(' ') + operationString },
         function(variable) { return doDiff(variable, ...this.args) },
-        function() { return "(" + operationString + " " + (this.args.length === 0 ? '' : this.args.map(cur => cur.prefix()).join(' ')) + ")" },
-        function() { return "(" + (this.args.length === 0 ? '' : this.args.map(cur => cur.postfix()).join(' ' )) + " " + operationString + ")" }
+        function() { return "(" + operationString + " " + this.args.map(cur => cur.prefix()).join(' ') + ")" },
+        function() { return "(" + this.args.map(cur => cur.postfix()).join(' ') + " " + operationString + ")" }
     );
     result.prototype.arity = (operation.length === 0 ? undefined : operation.length);
     operationByString[operationString] = result;
@@ -128,35 +128,38 @@ const Softmax = makeOperator(
 
 // :NOTE: why it's not const?
 // My :NOTE: fixed
-const ParsingError = function(message) {
-    this.message = message;
-};
-ParsingError.prototype = Object.create(Error.prototype);
-ParsingError.prototype.name = "ParsingError";
-ParsingError.prototype.constructor = ParsingError;
+const AbstractErrorFactory = function(proto, rule) {
+    const innerFactory = function(name, messagePref) {
+        const result = function(...args) {
+            this.message = messagePref + rule(...args);
+        }
+        result.prototype = Object.create(proto.prototype);
+        result.prototype.name = name;
+        result.constructor = proto;
+        return result;
+    }
+    return innerFactory;
+}
+
+const CustomErrorFactory = AbstractErrorFactory(Error, (message) => (message));
+const ParsingError = CustomErrorFactory('ParsingError', '');
+const createParsingErrorMessageSuffix = (pos, substr) => ('at pos = ' + pos + ", substring : --->> " + substr + " <<---");
+const ParsingErrorFactory = AbstractErrorFactory(ParsingError, createParsingErrorMessageSuffix);
 
 // :NOTE: when have the rules changed? Why it's not wrapped into some factory method?
 // My :NOTE: fixed
-const makeParsingError = function (name, messagePrefix) {
-    let result = function(source) {
-        ParsingError.call(this, messagePrefix + " at pos = " + source.getPos() + ", substring : " + source.getSubstr());
-    };
-    result.prototype = Object.create(ParsingError.prototype);
-    result.prototype.constructor = result;
-    result.prototype.name = name;
-    return result;
-};
 
-const UnexpectedTokenError = makeParsingError('UnexpectedTokenError', 'unexpected token : ');
-const UnexpectedEndOfExpressionError = makeParsingError('UnexpectedEndOfExpressionError', 'unexpected end of expression : ');
-const UnexpectedArityOfOperationError =  makeParsingError('UnexpectedArityOfOperationError', 'unexpected arity of operation : ');
-const BracketNotFoundError = makeParsingError('BracketNotFoundError', 'bracket(s) expected , but not found : ');
-const UnexpectedEmptyExpressionError = makeParsingError('UnexpectedEmptyExpressionError', 'unexpected empty expression');
-const OperationNotFoundError = makeParsingError('OperationNotFoundError', 'expected operation, but not found');
-const UnexpectedBracketError = makeParsingError('UnexpectedBracketError', 'unexpected ) found : ');
-const PostfixTypeOfExpressionError = makeParsingError('PostfixTypeOfExpressionError', 'postfix type of expression expected, but not found : ');
-const PrefixTypeOfExpressionError = makeParsingError('PrefixTypeOfExpressionError', 'Prefix type of expression expected, but not found : ');
-const UnexpectedPositionOfOperationError = makeParsingError('UnexpectedPositionOfOperationError', 'unexpected position of operation in bracket :');
+const UnexpectedTokenError = ParsingErrorFactory('UnexpectedTokenError', 'unexpected token ');
+const UnexpectedEndOfExpressionError = ParsingErrorFactory('UnexpectedEndOfExpressionError', 'unexpected end of expression ');
+const UnexpectedArityOfOperationError =  ParsingErrorFactory('UnexpectedArityOfOperationError', 'unexpected arity of operation ');
+const BracketNotFoundError = ParsingErrorFactory('BracketNotFoundError', 'bracket(s) expected, but not found ');
+const UnexpectedEmptyExpressionError = ParsingErrorFactory('UnexpectedEmptyExpressionError', 'unexpected empty expression ');
+const OperationNotFoundError = ParsingErrorFactory('OperationNotFoundError', 'expected operation, but not found ');
+//const UnexpectedBracketError = ParsingErrorFactory('UnexpectedBracketError', 'unexpected ) found ');
+const PostfixTypeOfExpressionError = ParsingErrorFactory('PostfixTypeOfExpressionError', 'postfix type of expression expected, but not found ');
+const PrefixTypeOfExpressionError = ParsingErrorFactory('PrefixTypeOfExpressionError', 'Prefix type of expression expected, but not found ');
+//const UnexpectedPositionOfOperationError = ParsingErrorFactory('UnexpectedPositionOfOperationError', createParsingErrorMessage('unexpected position of operation in bracket :'));
+
 // :NOTE: duplicated operators signs declaration (they are already mentioned in operators)
 /*const operationByString = { My :NOTE: now it's calculating automatically in makeOperator function
     '+' : Add, '-' : Subtract, '*' : Multiply, '/' : Divide, 'pow' : Power, 'log' : Log, 'negate' : Negate,
@@ -225,7 +228,7 @@ const Source = function() {
 };
 
 function buildSource(expression) {
-    let source = new Source();
+    const source = new Source();
     source.setSource(expression);
     return source;
 }
@@ -233,14 +236,14 @@ function buildSource(expression) {
 const createParser = function(mode) {
     const _mode = mode;
     let _source = undefined;
-    const test = function(cond, error) { if (cond) throw new error(_source); };
+    const test = function(cond, error) { if (cond) throw new error(_source.getPos(), _source.getSubstr()); };
     // My :NOTE: all errors are getting substring from source which length is less than 25 chars, not whole string of expression
     const error = function(err) { test(true, err); };
     function beginParse(expression) {
         _source = buildSource(expression);
         test(_source.checkEmpty(), UnexpectedEmptyExpressionError);
         let result = parse();
-        test(!_source.endFound(), UnexpectedTokenError);
+        test(!_source.endFound(), BracketNotFoundError);
         return result;
     }
     function parse() {
@@ -251,7 +254,8 @@ const createParser = function(mode) {
                 if (_source.getToken() === '(') {
                     args.push(parse());
                 } else if (_source.getToken() in operationByString) {
-                    test(operation !== undefined, UnexpectedPositionOfOperationError);
+                    test(operation !== undefined, UnexpectedTokenError);
+                    test(operation === undefined && pos !== 0 && _mode === 'prefix', PrefixTypeOfExpressionError);
                     operation = operationByString[_source.getToken()];
                     posOfOperatorInBracket = pos;
                     specialOperation = (specialOperations.includes(_source.getToken()));
@@ -267,8 +271,7 @@ const createParser = function(mode) {
             }
             test(_source.getToken() !== ')', BracketNotFoundError);
             test(operation === undefined, OperationNotFoundError);
-            test(_mode === 'prefix' && posOfOperatorInBracket !== 0, PrefixTypeOfExpressionError);
-            test(_mode === 'postfix' && posOfOperatorInBracket !== pos - 1, PostfixTypeOfExpressionError);
+            test(posOfOperatorInBracket + 1 !== pos && _mode === 'postfix', PostfixTypeOfExpressionError);
             test(operation.prototype.arity !== args.length && !specialOperation, UnexpectedArityOfOperationError);
             return new operation(...args);
         } else {
@@ -286,8 +289,6 @@ const createParser = function(mode) {
 
 // :NOTE: the rest of file looks like copy-pasted code with small variations
 // My :NOTE: fixed
-let parsePrefix = createParser('prefix');
-let parsePostfix = createParser('postfix');
-
-
+const parsePrefix = createParser('prefix');
+const parsePostfix = createParser('postfix');
 
