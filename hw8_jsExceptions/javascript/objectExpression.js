@@ -45,7 +45,7 @@ const Zero = new Const(0);
 const One = new Const(1);
 
 let operationByString = {};
-let specialOperations = [];
+let specialOperations = {};
 
 const makeOperator = function(operation, operationString, doDiff, special = false) {
     const result = function(...args) {
@@ -61,7 +61,7 @@ const makeOperator = function(operation, operationString, doDiff, special = fals
     result.prototype.arity = (operation.length === 0 ? undefined : operation.length);
     operationByString[operationString] = result;
     if (special) {
-        specialOperations.push(operationString);
+        specialOperations[operationString] = true;
     }
     return result;
 };
@@ -143,7 +143,7 @@ const AbstractErrorFactory = function(proto, rule) {
 
 const CustomErrorFactory = AbstractErrorFactory(Error, (message) => (message));
 const ParsingError = CustomErrorFactory('ParsingError', '');
-const createParsingErrorMessageSuffix = (pos, substr) => ('at pos = ' + pos + ", substring : --->> " + substr + " <<---");
+const createParsingErrorMessageSuffix = (pos, substr) => ('at pos = ' + pos + ", token(s) found : >> " + substr + " <<");
 const ParsingErrorFactory = AbstractErrorFactory(ParsingError, createParsingErrorMessageSuffix);
 
 // :NOTE: when have the rules changed? Why it's not wrapped into some factory method?
@@ -236,8 +236,17 @@ function buildSource(expression) {
 const createParser = function(mode) {
     const _mode = mode;
     let _source = undefined;
-    const test = function(cond, error) { if (cond) throw new error(_source.getPos(), _source.getSubstr()); };
-    // My :NOTE: all errors are getting substring from source which length is less than 25 chars, not whole string of expression
+    let tokenToReturn = undefined;
+    const test = function(cond, error) {
+        if (cond)
+            throw new error(_source.getPos(), (error === BracketNotFoundError ? _source.getSubstr() : ((tokenToReturn === undefined ?
+                (_source.getToken() === ')' ? _source.getSubstr() : _source.getToken()) : tokenToReturn))));
+        else
+            tokenToReturn = undefined;
+    };
+    const setTokenToReturn = function(str) {
+        tokenToReturn = str;
+    }
     const error = function(err) { test(true, err); };
     function beginParse(expression) {
         _source = buildSource(expression);
@@ -248,7 +257,7 @@ const createParser = function(mode) {
     }
     function parse() {
         if (_source.getToken() === '(') {
-            let operation = undefined, specialOperation = false, args = [], posOfOperatorInBracket = -1, pos = 0;
+            let operation = undefined, operationString, specialOperation = false, args = [], posOfOperatorInBracket = -1, pos = 0;
             _source.nextToken();
             while (!_source.endFound() && _source.getToken() !== ')') {
                 if (_source.getToken() === '(') {
@@ -256,9 +265,10 @@ const createParser = function(mode) {
                 } else if (_source.getToken() in operationByString) {
                     test(operation !== undefined, UnexpectedTokenError);
                     test(operation === undefined && pos !== 0 && _mode === 'prefix', PrefixTypeOfExpressionError);
+                    operationString = _source.getToken();
                     operation = operationByString[_source.getToken()];
                     posOfOperatorInBracket = pos;
-                    specialOperation = (specialOperations.includes(_source.getToken()));
+                    specialOperation = (_source.getToken() in specialOperations);
                 } else if (_source.getToken() in variableInd) {
                     args.push(new Variable(_source.getToken()));
                 } else if (!isNaN(+_source.getToken())) {
@@ -272,6 +282,7 @@ const createParser = function(mode) {
             test(_source.getToken() !== ')', BracketNotFoundError);
             test(operation === undefined, OperationNotFoundError);
             test(posOfOperatorInBracket + 1 !== pos && _mode === 'postfix', PostfixTypeOfExpressionError);
+            setTokenToReturn(operationString);
             test(operation.prototype.arity !== args.length && !specialOperation, UnexpectedArityOfOperationError);
             return new operation(...args);
         } else {
