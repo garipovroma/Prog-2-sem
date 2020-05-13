@@ -235,18 +235,15 @@ function buildSource(expression) {
 
 const createParser = function(mode) {
     const _mode = mode;
-    let _source = undefined;
-    let tokenToReturn = undefined;
+    let _source = undefined, tokenToReturn = undefined;
     const test = function(cond, error) {
+        const throwingString = (error === BracketNotFoundError ? _source.getSubstr() : ((tokenToReturn === undefined ?
+            (_source.getToken() === ')' ? _source.getSubstr() : _source.getToken()) : tokenToReturn)))
         if (cond)
-            throw new error(_source.getPos(), (error === BracketNotFoundError ? _source.getSubstr() : ((tokenToReturn === undefined ?
-                (_source.getToken() === ')' ? _source.getSubstr() : _source.getToken()) : tokenToReturn))));
-        else
-            tokenToReturn = undefined;
+            throw new error(_source.getPos(), throwingString)
+        tokenToReturn = undefined;
     };
-    const setTokenToReturn = function(str) {
-        tokenToReturn = str;
-    }
+    const setTokenToReturn = (str) => {tokenToReturn = str};
     const error = function(err) { test(true, err); };
     function beginParse(expression) {
         _source = buildSource(expression);
