@@ -47,16 +47,18 @@ const One = new Const(1);
 let operationByString = {};
 let specialOperations = {};
 
+const stringMethod = (left, right, makeStr, args) => (left + args.map(makeStr).join(' ') + right);
+
 const makeOperator = function(operation, operationString, doDiff, special = false) {
     const result = function(...args) {
         this.args = args;
     };
     setMethods(result,
         function(...args_) {return operation(...this.args.map((i) => (i.evaluate(...args_))))},
-        function() { return this.args.join(' ') + operationString },
+        function() { return stringMethod('', operationString, (a) => a.toString(), this.args) },
         function(variable) { return doDiff(variable, ...this.args) },
-        function() { return "(" + operationString + " " + this.args.map(cur => cur.prefix()).join(' ') + ")" },
-        function() { return "(" + this.args.map(cur => cur.postfix()).join(' ') + " " + operationString + ")" }
+        function() { return stringMethod('(' + operationString + ' ', ')', (a) => (a.prefix()), this.args) },
+        function() { return stringMethod('(', ' ' + operationString + ')', (a) => (a.postfix()), this.args) }
     );
     result.prototype.arity = (operation.length === 0 ? undefined : operation.length);
     operationByString[operationString] = result;
