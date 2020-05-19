@@ -12,25 +12,18 @@
     )
   )
 
-(defn abstract-unary-operation [operator]
-  (fn [arg]
-    (fn [var-values]
-      (operator (arg var-values))
-      )
-    )
-  )
-
+(comment ":NOTE: for what when you have abstract-operation? - My :NOTE: abstract unary operation function deleted")
 (def add (abstract-operation +))
 (def subtract (abstract-operation -))
 (def multiply (abstract-operation *))
-(def divide (abstract-operation (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
+(def divide (abstract-operation #(/ (double %1) (double %2))))
 (defn calc-med [& args]
   (nth (sort args) (int (/ (count args) 2)))
   )
 (defn calc-avg [& args]
   (/ (apply + args) (count args))
   )
-(def negate (abstract-unary-operation -))
+(def negate (abstract-operation -))
 (def med (abstract-operation calc-med))
 (def avg (abstract-operation calc-avg))
 
