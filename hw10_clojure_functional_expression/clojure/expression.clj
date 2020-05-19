@@ -1,4 +1,6 @@
-;delay
+;
+; HW-10 - review
+;
 
 (defn constant [const-value] (constantly const-value))
 (defn variable [variable-name] (fn [var-values] (get var-values variable-name)))
@@ -9,38 +11,36 @@
       )
     )
   )
-(defn abstract-unary-operation [operator]
-  (fn [arg]
-    (fn [var-values]
-      (operator (arg var-values))
-      )
-    )
-  )
 
+(comment ":NOTE: for what when you have abstract-operation? - My :NOTE: abstract unary operation function deleted")
 (def add (abstract-operation +))
 (def subtract (abstract-operation -))
 (def multiply (abstract-operation *))
-(def divide (abstract-operation (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
-(defn my-med [& args]
+(def divide (abstract-operation #(/ (double %1) (double %2))))
+(defn calc-med [& args]
   (nth (sort args) (int (/ (count args) 2)))
   )
-(defn my-avg [& args]
+(defn calc-avg [& args]
   (/ (apply + args) (count args))
   )
-(def negate (abstract-unary-operation -))
-(def med (abstract-operation my-med))
-(def avg (abstract-operation my-avg))
-(def get-operation-by-symbol
+(def negate (abstract-operation -))
+(def med (abstract-operation calc-med))
+(def avg (abstract-operation calc-avg))
+
+(def get-functional-operation
   {'negate negate '+ add '- subtract '* multiply '/ divide 'med med 'avg avg}
   )
 
-(defn my-parse [ss]
-  (cond
-    (number? ss) (constant ss)
-    (symbol? ss) (variable (str ss))
-    :else (apply (get get-operation-by-symbol (first ss)) (mapv my-parse (rest ss)))
-    )
-  )
-(defn parseFunction [s]
-  (my-parse (read-string s))
-  )
+
+(defn build-parser [get-operation const-func variable-func]
+  (fn [input-string]
+    (letfn [(recursive-parse [cur-string]
+              (cond
+                (number? cur-string) (const-func cur-string)
+                (symbol? cur-string) (variable-func (str cur-string))
+                :else (apply (get get-operation (first cur-string)) (mapv recursive-parse (rest cur-string)))
+                ))]
+      (recursive-parse (read-string input-string))
+      )))
+
+(def parseFunction (build-parser get-functional-operation constant variable))
