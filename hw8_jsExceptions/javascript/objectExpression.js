@@ -1,7 +1,4 @@
-//review
-
 "use strict"
-
 const Expression = function(evaluate, toString, diff, prefix, postfix) {
     this.prototype.evaluate = evaluate;
     this.prototype.toString = toString;
@@ -21,8 +18,6 @@ const createSimpleExpression = function(body, get, toString, doDiff) {
     return result;
 };
 
-// :NOTE: Const and Variable should be declared in the same way as other expressions (const Const = someFactory(...))
-// My :NOTE: fixed
 const Const = createSimpleExpression(
     function(value) { this.value = value; },
     function() { return +this.value },
@@ -128,8 +123,6 @@ const Softmax = makeOperator(
     true
 );
 
-// :NOTE: why it's not const?
-// My :NOTE: fixed
 const AbstractErrorFactory = function(proto, rule) {
     const innerFactory = function(name, messagePref) {
         const result = function(...args) {
@@ -148,25 +141,14 @@ const ParsingError = CustomErrorFactory('ParsingError', '');
 const createParsingErrorMessageSuffix = (pos, substr) => ('at pos = ' + pos + ", token(s) found : >> " + substr + " <<");
 const ParsingErrorFactory = AbstractErrorFactory(ParsingError, createParsingErrorMessageSuffix);
 
-// :NOTE: when have the rules changed? Why it's not wrapped into some factory method?
-// My :NOTE: fixed
-
 const UnexpectedTokenError = ParsingErrorFactory('UnexpectedTokenError', 'unexpected token ');
 const UnexpectedEndOfExpressionError = ParsingErrorFactory('UnexpectedEndOfExpressionError', 'unexpected end of expression ');
 const UnexpectedArityOfOperationError =  ParsingErrorFactory('UnexpectedArityOfOperationError', 'unexpected arity of operation ');
 const BracketNotFoundError = ParsingErrorFactory('BracketNotFoundError', 'bracket(s) expected, but not found ');
 const UnexpectedEmptyExpressionError = ParsingErrorFactory('UnexpectedEmptyExpressionError', 'unexpected empty expression ');
 const OperationNotFoundError = ParsingErrorFactory('OperationNotFoundError', 'expected operation, but not found ');
-//const UnexpectedBracketError = ParsingErrorFactory('UnexpectedBracketError', 'unexpected ) found ');
 const PostfixTypeOfExpressionError = ParsingErrorFactory('PostfixTypeOfExpressionError', 'postfix type of expression expected, but not found ');
 const PrefixTypeOfExpressionError = ParsingErrorFactory('PrefixTypeOfExpressionError', 'Prefix type of expression expected, but not found ');
-//const UnexpectedPositionOfOperationError = ParsingErrorFactory('UnexpectedPositionOfOperationError', createParsingErrorMessage('unexpected position of operation in bracket :'));
-
-// :NOTE: duplicated operators signs declaration (they are already mentioned in operators)
-/*const operationByString = { My :NOTE: now it's calculating automatically in makeOperator function
-    '+' : Add, '-' : Subtract, '*' : Multiply, '/' : Divide, 'pow' : Power, 'log' : Log, 'negate' : Negate,
-    'sumexp' : Sumexp, 'softmax' : Softmax
-};*/
 
 function parse(expression) {
     let stack = [];
@@ -297,8 +279,6 @@ const createParser = function(mode) {
     return beginParse;
 };
 
-// :NOTE: the rest of file looks like copy-pasted code with small variations
-// My :NOTE: fixed
 const parsePrefix = createParser('prefix');
 const parsePostfix = createParser('postfix');
 
