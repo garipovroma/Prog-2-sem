@@ -16,7 +16,7 @@
 (def add (abstract-operation +))
 (def subtract (abstract-operation -))
 (def multiply (abstract-operation *))
-(def divide (abstract-operation #(/ (double %1) (double %2))))
+(def divide (abstract-operation (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
 (defn calc-med [& args]
   (nth (sort args) (int (/ (count args) 2)))
   )
