@@ -1,8 +1,4 @@
-;
-; HW-10 - review
-;
-
-(defn constant [const-value] (constantly const-value))
+(def constant constantly)
 (defn variable [variable-name] (fn [var-values] (get var-values variable-name)))
 (defn abstract-operation [operator]
   (fn [& args]
@@ -11,12 +7,11 @@
       )
     )
   )
-
-(comment ":NOTE: for what when you have abstract-operation? - My :NOTE: abstract unary operation function deleted")
 (def add (abstract-operation +))
 (def subtract (abstract-operation -))
 (def multiply (abstract-operation *))
-(def divide (abstract-operation (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
+(def divide (abstract-operation
+              (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
 (defn calc-med [& args]
   (nth (sort args) (int (/ (count args) 2)))
   )
@@ -30,7 +25,6 @@
 (def get-functional-operation
   {'negate negate '+ add '- subtract '* multiply '/ divide 'med med 'avg avg}
   )
-
 
 (defn build-parser [get-operation const-func variable-func]
   (fn [input-string]
@@ -48,7 +42,6 @@
 ;
 ; HW-11 - review
 ;
-
 
 (definterface Expression
   (evaluate [vars])
@@ -94,6 +87,7 @@
 
 (def Negate (build-operation - "negate" (fn [vars & args] (Negate (diff (first args) vars)))))
 
+(comment ":NOTE: it's good but it can be done in abtraction, not to copy-paste it in each declaration")
 (defn diff-all [vars args]
   (mapv #(diff % vars) args))
 
@@ -108,26 +102,20 @@
    (fn [vars & args]
     (apply Subtract (diff-all vars args))
      )))
-
+(declare Multiply)
 (def Multiply
   (build-operation * "*" (fn [vars & args]
-     (let [rst (rest args)]
-       (if (= (count args) 1) (diff (first args) vars)
-       (Add (apply Multiply (diff (first args) vars) rst)
-            (Multiply (diff (apply Multiply rst) vars) (first args))))))))
+     (let [rst (cond (= (count args) 1) ONE :else (apply Multiply (rest args))) fst (first args)]
+       (Add (Multiply (diff fst vars) rst) (Multiply (diff rst vars) fst))))))
 
 (defn divide-operation
   ([single-arg] (single-arg))
   ([first-arg & other-args] (/ first-arg (double (apply * other-args)))))
+(comment ":NOTE: to many code for Divide - My :NOTE: fixed")
 (def Divide (build-operation divide-operation "/"
  (fn [vars & args]
-    (let [rst (rest args)]
-      (if (== (count args) 1) (diff (first args) vars)
-      (Divide
-        (Subtract
-          (Multiply (diff (first args) vars) (apply Multiply rst))
-          (Multiply (first args) (diff (apply Multiply rst) vars)))
-        (Multiply (apply Multiply rst) (apply Multiply rst))))))))
+    (let [rst (cond (= (count args) 1) ONE :else (apply Multiply (rest args))) fst (first args)]
+      (Divide (Subtract (Multiply (diff fst vars) rst) (Multiply fst (diff rst vars))) (Multiply rst rst))))))
 
 (defn build-objects-expression [operation args] (apply operation args))
 (defn sum-diff [vars args] (build-objects-expression Add (diff-all vars args)))
