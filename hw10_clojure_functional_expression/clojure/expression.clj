@@ -1,8 +1,4 @@
-;
-; HW-10 - review
-;
-
-(defn constant [const-value] (constantly const-value))
+(def constant constantly)
 (defn variable [variable-name] (fn [var-values] (get var-values variable-name)))
 (defn abstract-operation [operator]
   (fn [& args]
@@ -11,12 +7,11 @@
       )
     )
   )
-
-(comment ":NOTE: for what when you have abstract-operation? - My :NOTE: abstract unary operation function deleted")
 (def add (abstract-operation +))
 (def subtract (abstract-operation -))
 (def multiply (abstract-operation *))
-(def divide (abstract-operation (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
+(def divide (abstract-operation
+              (fn ([x] (/ (double x))) ([x & rst] (reduce (fn [a b] (/ (double a) (double b))) x rst)))))
 (defn calc-med [& args]
   (nth (sort args) (int (/ (count args) 2)))
   )
@@ -30,7 +25,6 @@
 (def get-functional-operation
   {'negate negate '+ add '- subtract '* multiply '/ divide 'med med 'avg avg}
   )
-
 
 (defn build-parser [get-operation const-func variable-func]
   (fn [input-string]
