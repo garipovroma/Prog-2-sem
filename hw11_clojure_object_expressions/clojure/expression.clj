@@ -79,39 +79,40 @@
   Expression
   (evaluate [_ vars] (apply operation (mapv #(evaluate % vars) args)))
   (string [_]  (str "(" operation-string " " (clojure.string/join " " (mapv #(toString %) args))  ")"))
-  (diff [_ vars] (apply diff-rule vars args))
-  )
+  (diff [_ vars] (letfn [(build-diff [rule]
+              (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))]
+                    (apply (build-diff diff-rule) vars args))))
+
 
 (defn build-operation [operation operation-string diff-rule]
-  (letfn [(build-diff [rule] (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))])
   #(Abstract-Operation. %& operation operation-string diff-rule))
 
-(def Negate (build-operation - "negate" (fn [vars & args] (Negate (diff (first args) vars)))))
+(def Negate (build-operation - "negate" #(Negate (first %2))))
 
-(comment ":NOTE: it's good but it can be done in abtraction, not to copy-paste it in each declaration")
+(comment ":NOTE: it's good but it can be done in abtraction, not to copy-paste it in each declaration - fixed")
 
-(defn build-diff [rule] (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))
-(def Add (build-operation + "+" (build-diff #(apply Add %2))))
-(def Subtract (build-operation - "-" (build-diff #(apply Subtract %2))))
+(def Add (build-operation + "+" #(apply Add %2)))
+(def Subtract (build-operation - "-" #(apply Subtract %2)))
 (declare Multiply)
 (def Multiply
   (build-operation * "*"
-      (build-diff #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
+      #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
                          dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
-                     (Add (Multiply f dg) (Multiply df g))))))
+                     (Add (Multiply f dg) (Multiply df g)))))
 (defn divide-operation
   ([single-arg] (single-arg))
   ([first-arg & other-args] (/ first-arg (double (apply * other-args)))))
 (comment ":NOTE: to many code for Divide - My :NOTE: fixed")
 (def Divide (build-operation divide-operation "/"
-    (build-diff #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
+    #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
                        dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
-                   (Divide (Subtract (Multiply df g) (Multiply f dg)) (Multiply g g))))))
+                   (Divide (Subtract (Multiply df g) (Multiply f dg)) (Multiply g g)))))
 
-(def Sum (build-operation + "sum" (build-diff #(apply Add %2))))
-(def Avg (build-operation calc-avg "avg" (build-diff #(Divide (apply Add %2) (Constant (count %1))))))
+(def Sum (build-operation + "sum" #(apply Add %2)))
+(def Avg (build-operation calc-avg "avg" #(Divide (apply Add %2) (Constant (count %1)))))
 
 (def get-object-operation
   {'+ Add '- Subtract '/ Divide '* Multiply 'negate Negate 'sum Sum 'avg Avg})
 
 (def parseObject (build-parser get-object-operation Constant Variable))
+(println (toString (diff (Divide (Negate (Variable "x")) (Constant 2.0)) "x")))
