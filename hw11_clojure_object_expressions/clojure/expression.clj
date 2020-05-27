@@ -91,23 +91,14 @@
 (defn diff-all [vars args]
   (mapv #(diff % vars) args))
 
-(def Add
-  (build-operation + "+"
-    (fn [vars & args]
-      (apply Add (diff-all vars args))
-      )))
-
-(def Subtract
-  (build-operation - "-"
-   (fn [vars & args]
-    (apply Subtract (diff-all vars args))
-     )))
+(defn build-diff [rule] (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))
+(def Add (build-operation + "+" (build-diff #(apply Add %2))))
+(def Subtract (build-operation - "-" (build-diff #(apply Subtract %2))))
 (declare Multiply)
 (def Multiply
   (build-operation * "*" (fn [vars & args]
      (let [rst (cond (= (count args) 1) ONE :else (apply Multiply (rest args))) fst (first args)]
        (Add (Multiply (diff fst vars) rst) (Multiply (diff rst vars) fst))))))
-
 (defn divide-operation
   ([single-arg] (single-arg))
   ([first-arg & other-args] (/ first-arg (double (apply * other-args)))))
@@ -119,9 +110,8 @@
 
 (defn build-objects-expression [operation args] (apply operation args))
 (defn sum-diff [vars args] (build-objects-expression Add (diff-all vars args)))
-(def Sum (build-operation + "sum" (fn [vars & args] (sum-diff vars args))))
-(def Avg (build-operation calc-avg "avg"
-     (fn [vars & args] (Divide (sum-diff vars args) (Constant (count args))))))
+(def Sum (build-operation + "sum" (build-diff #(apply Add %2))))
+(def Avg (build-operation calc-avg "avg" (build-diff #(Divide (apply Add %2) (Constant (count %1))))))
 
 (def get-object-operation
   {'+ Add '- Subtract '/ Divide '* Multiply 'negate Negate 'sum Sum 'avg Avg})
