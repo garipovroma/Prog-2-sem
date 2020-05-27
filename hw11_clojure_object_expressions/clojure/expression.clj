@@ -83,33 +83,31 @@
   )
 
 (defn build-operation [operation operation-string diff-rule]
+  (letfn [(build-diff [rule] (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))])
   #(Abstract-Operation. %& operation operation-string diff-rule))
 
 (def Negate (build-operation - "negate" (fn [vars & args] (Negate (diff (first args) vars)))))
 
 (comment ":NOTE: it's good but it can be done in abtraction, not to copy-paste it in each declaration")
-(defn diff-all [vars args]
-  (mapv #(diff % vars) args))
 
 (defn build-diff [rule] (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))
 (def Add (build-operation + "+" (build-diff #(apply Add %2))))
 (def Subtract (build-operation - "-" (build-diff #(apply Subtract %2))))
 (declare Multiply)
 (def Multiply
-  (build-operation * "*" (fn [vars & args]
-     (let [rst (cond (= (count args) 1) ONE :else (apply Multiply (rest args))) fst (first args)]
-       (Add (Multiply (diff fst vars) rst) (Multiply (diff rst vars) fst))))))
+  (build-operation * "*"
+      (build-diff #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
+                         dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
+                     (Add (Multiply f dg) (Multiply df g))))))
 (defn divide-operation
   ([single-arg] (single-arg))
   ([first-arg & other-args] (/ first-arg (double (apply * other-args)))))
 (comment ":NOTE: to many code for Divide - My :NOTE: fixed")
 (def Divide (build-operation divide-operation "/"
- (fn [vars & args]
-    (let [rst (cond (= (count args) 1) ONE :else (apply Multiply (rest args))) fst (first args)]
-      (Divide (Subtract (Multiply (diff fst vars) rst) (Multiply fst (diff rst vars))) (Multiply rst rst))))))
+    (build-diff #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
+                       dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
+                   (Divide (Subtract (Multiply df g) (Multiply f dg)) (Multiply g g))))))
 
-(defn build-objects-expression [operation args] (apply operation args))
-(defn sum-diff [vars args] (build-objects-expression Add (diff-all vars args)))
 (def Sum (build-operation + "sum" (build-diff #(apply Add %2))))
 (def Avg (build-operation calc-avg "avg" (build-diff #(Divide (apply Add %2) (Constant (count %1))))))
 
