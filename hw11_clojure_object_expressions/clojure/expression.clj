@@ -83,19 +83,15 @@
               (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))]
                     (apply (build-diff diff-rule) vars args))))
 
-
 (defn build-operation [operation operation-string diff-rule]
   #(Abstract-Operation. %& operation operation-string diff-rule))
-
 (def Negate (build-operation - "negate" #(Negate (first %2))))
 
 (comment ":NOTE: it's good but it can be done in abtraction, not to copy-paste it in each declaration - fixed")
 
 (def Add (build-operation + "+" #(apply Add %2)))
 (def Subtract (build-operation - "-" #(apply Subtract %2)))
-(declare Multiply)
-(def Multiply
-  (build-operation * "*"
+(def Multiply (build-operation * "*"
       #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
                          dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
                      (Add (Multiply f dg) (Multiply df g)))))
@@ -107,7 +103,6 @@
     #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
                        dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
                    (Divide (Subtract (Multiply df g) (Multiply f dg)) (Multiply g g)))))
-
 (def Sum (build-operation + "sum" #(apply Add %2)))
 (def Avg (build-operation calc-avg "avg" #(Divide (apply Add %2) (Constant (count %1)))))
 
