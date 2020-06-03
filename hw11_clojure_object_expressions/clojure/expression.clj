@@ -1,3 +1,6 @@
+;
+; HW10 - accepted
+;
 (def constant constantly)
 (defn variable [variable-name] (fn [var-values] (get var-values variable-name)))
 (defn abstract-operation [operator]
@@ -53,56 +56,53 @@
 (defn diff [a s] (.diff a s))
 (defn evaluate [a d] (.evaluate a d))
 
-(declare ZERO)
+(comment ":NOTE: merge or remove prototypes for Constant and Variable  -  My :NOTE: abstract type for them created")
 
-(deftype Const [const]
+(deftype Abstract-Simple-Expression [evaluate to-string diff element]
   Expression
-  (evaluate [_ _] const)
-  (string [_] (format "%.1f" const))
-  (diff [_ vars] ZERO))
-
-(def ZERO (Const. 0.0))
-(def ONE (Const. 1.0))
-
-(deftype Var [var]
-  Expression
-  (evaluate [_ vars] (vars (str var)))
-  (string [_] (str var))
-  (diff [_ vars] (if (= (str var) vars) ONE ZERO))
+  (evaluate [_ vars] (evaluate element vars))
+  (string [_] (to-string element))
+  (diff [_ vars] (diff element vars))
   )
 
-(defn Constant [const]
-  (Const. const))
-(defn Variable [var] (Var. var))
+(defn build-simple-expression-element [eval to-string diff]
+  (fn [x] (Abstract-Simple-Expression.
+            eval to-string diff x)))
+
+(declare ZERO)
+(declare ONE)
+
+(def Constant (build-simple-expression-element (fn [f s] f) #(format "%.1f" (double %)) (fn [f s] ZERO)))
+(def ZERO (Constant 0.0))
+(def ONE (Constant 1.0))
+
+(def Variable (build-simple-expression-element #(%2 (str %1)) #(str %1) #(if (= ( str %1) %2) ONE ZERO)))
 
 (deftype Abstract-Operation [args operation operation-string diff-rule]
   Expression
   (evaluate [_ vars] (apply operation (mapv #(evaluate % vars) args)))
   (string [_]  (str "(" operation-string " " (clojure.string/join " " (mapv #(toString %) args))  ")"))
   (diff [_ vars] (letfn [(build-diff [rule]
-              (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))]
-                    (apply (build-diff diff-rule) vars args))))
+                           (fn [vars & args] (let [diffed-args (mapv #(diff % vars) args)] (rule args diffed-args))))]
+                   (apply (build-diff diff-rule) vars args))))
 
 (defn build-operation [operation operation-string diff-rule]
   #(Abstract-Operation. %& operation operation-string diff-rule))
 (def Negate (build-operation - "negate" #(Negate (first %2))))
 
-(comment ":NOTE: it's good but it can be done in abtraction, not to copy-paste it in each declaration - fixed")
-
 (def Add (build-operation + "+" #(apply Add %2)))
 (def Subtract (build-operation - "-" #(apply Subtract %2)))
 (def Multiply (build-operation * "*"
-      #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
-                         dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
-                     (Add (Multiply f dg) (Multiply df g)))))
+                               #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
+                                      dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
+                                  (Add (Multiply f dg) (Multiply df g)))))
 (defn divide-operation
   ([single-arg] (single-arg))
   ([first-arg & other-args] (/ first-arg (double (apply * other-args)))))
-(comment ":NOTE: to many code for Divide - My :NOTE: fixed")
 (def Divide (build-operation divide-operation "/"
-    #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
-                       dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
-                   (Divide (Subtract (Multiply df g) (Multiply f dg)) (Multiply g g)))))
+                             #(let [f (first %1) df (first %2) g (cond (= (count %1) 1) ONE :else(apply Multiply (rest %1)))
+                                    dg (cond (= (count %2) 1) ONE :else(apply Multiply (rest %2)))]
+                                (Divide (Subtract (Multiply df g) (Multiply f dg)) (Multiply g g)))))
 (def Sum (build-operation + "sum" #(apply Add %2)))
 (def Avg (build-operation calc-avg "avg" #(Divide (apply Add %2) (Constant (count %1)))))
 
@@ -110,4 +110,3 @@
   {'+ Add '- Subtract '/ Divide '* Multiply 'negate Negate 'sum Sum 'avg Avg})
 
 (def parseObject (build-parser get-object-operation Constant Variable))
-(println (toString (diff (Divide (Negate (Variable "x")) (Constant 2.0)) "x")))
