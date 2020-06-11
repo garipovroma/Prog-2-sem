@@ -1,5 +1,3 @@
-;review
-
 (defn sizes-checker [args seq]
   (every? (partial == (count (first args))) seq))
 
@@ -30,11 +28,10 @@
 (def v+ (vector-operation +))
 (def v- (vector-operation -))
 (def v* (vector-operation *))
-(comment ":NOTE: why it's not a vector-operation? - My :NOTE: - fixed")
+(comment ":NOTE: why it's not a vector-operation? - My :NOTE: - not it using v* which is vector-operation")
 (defn scalar [& args] {:pre [(every? is-vector? args) (vectors-sizes-equals? args)]}
   (apply + (apply v* args)))
 
-(comment "common 2.1, contract? - My :NOTE: - fixed")
 (defn vect [& args]
   {:pre [(vectors-sizes-equals? args) (every? is-vector? args) (every? (partial == 3) (mapv count args))]}
   (letfn [(simple-vect [[x1, y1, z1], [x2, y2, z2]]
@@ -49,7 +46,6 @@
 (def m+ (matrix-operation +))
 (def m- (matrix-operation -))
 (def m* (matrix-operation *))
-(comment ":NOTE: you make (len(args) * size (m)) multiplications when it can be just (size(m))" " My :NOTE: fixed")
 (defn m*s [m & args] {:pre [(is-matrix? m) (every? number? args)]}
   (let [prod (apply * args)]
     (mapv #(v*s % prod) m)))
